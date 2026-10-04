@@ -19,8 +19,8 @@
 
 ### Task 1 — Proyecto base
 
-- [ ] **Task 1.1** — `docs: add PRD, ARCHITECTURE, AGENTS and TASKS`
-- [ ] **Task 1.2** — `chore: add repo structure, README, gitignore and env example`
+- [x] **Task 1.1** — `docs: add PRD, ARCHITECTURE, AGENTS and TASKS`
+- [x] **Task 1.2** — `chore: add repo structure, README, gitignore and env example`
   Carpetas `migrations/`, `seeds/dev/`, `scripts/`, `docs/`. `.gitignore` con `.env`, `*.dump`, `*.sql.gz`.
 - [ ] **Task 1.3** — `chore: add flyway.conf with shared settings`
   `validateOnMigrate=true`, `outOfOrder=false`, `cleanDisabled=true`.
