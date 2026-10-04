@@ -1,0 +1,40 @@
+# Base local de desarrollo: Postgres 18 + Flyway (migrations/ + seeds/dev/).
+# Solo desarrollo: credenciales fijas, nunca usar contra RDS.
+name: cuy-monitor-db
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: cuymonitor
+      POSTGRES_USER: cuymonitor
+      POSTGRES_PASSWORD: cuymonitor
+    ports:
+      - "5432:5432"
+    volumes:
+      # Formato de Postgres 18: el volumen va en /var/lib/postgresql, NO en .../data
+      - pgdata-dev:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cuymonitor -d cuymonitor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  flyway:
+    image: flyway/flyway:11.20.3-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/flyway/sql/migrations:ro
+      - ./seeds/dev:/flyway/sql/seeds:ro
+      - ./flyway.conf:/flyway/conf/flyway.conf:ro
+    command: >
+      -url=jdbc:postgresql://postgres:5432/cuymonitor
+      -user=cuymonitor
+      -password=cuymonitor
+      -locations=filesystem:/flyway/sql/migrations,filesystem:/flyway/sql/seeds
+      migrate
+
+volumes:
+  pgdata-dev:

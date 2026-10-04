@@ -24,7 +24,7 @@
   Carpetas `migrations/`, `seeds/dev/`, `scripts/`, `docs/`. `.gitignore` con `.env`, `*.dump`, `*.sql.gz`.
 - [x] **Task 1.3** — `chore: add flyway.conf with shared settings`
   `validateOnMigrate=true`, `outOfOrder=false`, `cleanDisabled=true`.
-- [ ] **Task 1.4** — `chore: add local docker compose with Postgres 18 and Flyway`
+- [x] **Task 1.4** — `chore: add local docker compose with Postgres 18 and Flyway`
   Volumen en `/var/lib/postgresql` (formato de Postgres 18), healthcheck, Flyway con `migrations/` + `seeds/dev/`.
 
 ### Task 2 — Traer las migraciones del backend
