@@ -22,7 +22,7 @@
 - [x] **Task 1.1** — `docs: add PRD, ARCHITECTURE, AGENTS and TASKS`
 - [x] **Task 1.2** — `chore: add repo structure, README, gitignore and env example`
   Carpetas `migrations/`, `seeds/dev/`, `scripts/`, `docs/`. `.gitignore` con `.env`, `*.dump`, `*.sql.gz`.
-- [ ] **Task 1.3** — `chore: add flyway.conf with shared settings`
+- [x] **Task 1.3** — `chore: add flyway.conf with shared settings`
   `validateOnMigrate=true`, `outOfOrder=false`, `cleanDisabled=true`.
 - [ ] **Task 1.4** — `chore: add local docker compose with Postgres 18 and Flyway`
   Volumen en `/var/lib/postgresql` (formato de Postgres 18), healthcheck, Flyway con `migrations/` + `seeds/dev/`.
