@@ -33,7 +33,7 @@
 
 - [x] **Task 2.1** — `feat(schema): move V1 initial schema from the backend`
   Copiar `cuy-monitor-backend/src/main/resources/db/migration/V1__initial_schema.sql` **sin cambiar ni un byte** (mismo checksum).
-- [ ] **Task 2.2** — `feat(schema): move V2 app_user and otp_challenge from the backend`
+- [x] **Task 2.2** — `feat(schema): move V2 app_user and otp_challenge from the backend`
   Igual que la anterior, con `V2__create_app_user_and_otp_challenge.sql`.
 - [ ] **Task 2.3** — *(sin commit)* `docker compose up -d` desde cero y `flyway validate` sin errores
 
