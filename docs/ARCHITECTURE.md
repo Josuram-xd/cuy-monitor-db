@@ -67,14 +67,25 @@ Flyway settings used everywhere: `validateOnMigrate=true`, `outOfOrder=false`, `
 ### 3.1 `Dockerfile` (migrate image)
 
 ```dockerfile
-FROM flyway/flyway:11-alpine
+FROM flyway/flyway:11.20.3-alpine
 COPY flyway.conf /flyway/conf/flyway.conf
-COPY migrations /flyway/sql
-# DB_* come from Compose; sslmode=require for RDS
-ENTRYPOINT ["sh", "-c", "flyway -url=jdbc:postgresql://${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}?sslmode=${DB_SSLMODE:-require} -user=${DB_USER} -password=${DB_PASSWORD} migrate"]
+COPY migrations /flyway/sql                       # never seeds/
+COPY scripts/migrate-entrypoint.sh /usr/local/bin/migrate-entrypoint.sh
+ENV FLYWAY_LOCATIONS=filesystem:/flyway/sql
+ENTRYPOINT ["/usr/local/bin/migrate-entrypoint.sh"]
+CMD ["migrate"]
 ```
 
-Pin the exact Flyway tag when the file is written (ADR-006: never `:latest`).
+`scripts/migrate-entrypoint.sh` builds `FLYWAY_URL` from `DB_HOST`, `DB_PORT` (default 5432), `DB_NAME` and `DB_SSLMODE` (default `require`), and passes `DB_USER` / `DB_PASSWORD` as `FLYWAY_USER` / `FLYWAY_PASSWORD`, so the password never shows up as a process argument. A missing variable stops the container with a clear message. Any Flyway command can be passed instead of `migrate` (`docker run … cuy-monitor-db-migrate:local info`).
+
+The Flyway tag is pinned and is the same as in `docker-compose.yml` (ADR-006: never `:latest`). `.dockerignore` keeps everything except `flyway.conf`, `migrations/` and the entry point out of the build context.
+
+Test it against the local database (Task 4.2):
+
+```bash
+docker build -t cuy-monitor-db-migrate:local .
+docker run --rm --network cuy-monitor-db_default -e DB_HOST=postgres -e DB_NAME=cuymonitor -e DB_USER=cuymonitor -e DB_PASSWORD=cuymonitor -e DB_SSLMODE=disable cuy-monitor-db-migrate:local validate
+```
 
 ### 3.2 Local `docker-compose.yml`
 

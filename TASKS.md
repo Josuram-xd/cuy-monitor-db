@@ -56,7 +56,7 @@
 
 🔗 **Depende de:** Task 2
 
-- [ ] **Task 4.1** — `build: add Dockerfile with Flyway and production migrations`
+- [x] **Task 4.1** — `build: add Dockerfile with Flyway and production migrations`
   `FROM flyway/flyway:<tag fijo>`, copia solo `migrations/` (nunca `seeds/`), URL armada con `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` y `sslmode=require`.
 - [ ] **Task 4.2** — *(sin commit)* probar la imagen contra la base local con `DB_SSLMODE=disable`
 
