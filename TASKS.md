@@ -47,7 +47,7 @@
   `ALTER TABLE cage ADD COLUMN code VARCHAR(50)`, poner `cage-1` a la jaula piloto, después `NOT NULL` + `uq_cage_code`. Así el `cageId` de los contratos existe en la base.
 - [x] **Task 3.2** — `feat(schema): add V4 health tables`
   `guinea_pig`, `event`, `state_transition`, `alert`, `weight_reading`, `baseline_profile` con sus FK, `CHECK` de enums, `uq_guinea_pig_cage_color` e índices de la sección 4 de `docs/ARCHITECTURE.md`.
-- [ ] **Task 3.3** — `docs(schema): update data dictionary and ER diagram`
+- [x] **Task 3.3** — `docs(schema): update data dictionary and ER diagram`
 - [ ] **Task 3.4** — *(sin commit)* probar a mano en `psql`: `event.id` repetido, color repetido en la jaula y valor de enum inválido tienen que fallar
 
 🔓 **Desbloquea:** `cuy-monitor-backend` Task 4.6–4.8 (entidades JPA y adaptadores de salud)
