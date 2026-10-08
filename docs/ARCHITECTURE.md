@@ -88,10 +88,11 @@ services:
     volumes: [pgdata-dev:/var/lib/postgresql]     # Postgres 18 layout: NOT .../data
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U cuymonitor -d cuymonitor"], interval: 5s, retries: 10 }
   flyway:
-    image: flyway/flyway:11-alpine
+    image: flyway/flyway:11.20.3-alpine
     depends_on: { postgres: { condition: service_healthy } }
     volumes: ["./migrations:/flyway/sql/migrations:ro", "./seeds/dev:/flyway/sql/seeds:ro", "./flyway.conf:/flyway/conf/flyway.conf:ro"]
-    command: -url=jdbc:postgresql://postgres:5432/cuymonitor -user=cuymonitor -password=cuymonitor -locations=filesystem:/flyway/sql/migrations,filesystem:/flyway/sql/seeds migrate
+    environment: { FLYWAY_URL: "jdbc:postgresql://postgres:5432/cuymonitor", FLYWAY_USER: cuymonitor, FLYWAY_PASSWORD: cuymonitor, FLYWAY_LOCATIONS: "filesystem:/flyway/sql/migrations,filesystem:/flyway/sql/seeds" }
+    command: migrate      # connection lives in env vars, so `docker compose run --rm flyway info|validate` works too
 volumes:
   pgdata-dev:
 ```
