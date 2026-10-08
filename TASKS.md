@@ -83,7 +83,7 @@
   `seeds/dev/R__dev_seed.sql`, con `ON CONFLICT DO NOTHING` para que se pueda volver a correr.
 - [x] **Task 6.2** — `chore(seeds): add dev test user with a known BCrypt password`
   Usuario `dev` / `dev-password`, estado `ACTIVE`. El hash se genera con el `BCryptPasswordHasher` del backend; nunca un usuario real.
-- [ ] **Task 6.3** — `chore(seeds): add sample events, alerts and weight readings`
+- [x] **Task 6.3** — `chore(seeds): add sample events, alerts and weight readings`
   Para que el dashboard tenga datos al desarrollar sin el fake producer.
 
 ### Task 7 — Ajustes que pida el backend
