@@ -43,7 +43,7 @@
 
 🔗 **Depende de:** Task 2 · `cuy-monitor-backend` Task 3.2 (enums en los contratos) · revisar columnas con `cuy-monitor-backend` Task 4.5
 
-- [ ] **Task 3.1** — `feat(schema): add V3 public code to cage`
+- [x] **Task 3.1** — `feat(schema): add V3 public code to cage`
   `ALTER TABLE cage ADD COLUMN code VARCHAR(50)`, poner `cage-1` a la jaula piloto, después `NOT NULL` + `uq_cage_code`. Así el `cageId` de los contratos existe en la base.
 - [ ] **Task 3.2** — `feat(schema): add V4 health tables`
   `guinea_pig`, `event`, `state_transition`, `alert`, `weight_reading`, `baseline_profile` con sus FK, `CHECK` de enums, `uq_guinea_pig_cage_color` e índices de la sección 4 de `docs/ARCHITECTURE.md`.
