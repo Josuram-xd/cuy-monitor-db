@@ -79,11 +79,11 @@
 
 🔗 **Depende de:** Task 3
 
-- [ ] **Task 6.1** — `chore(seeds): add dev guinea pigs with every mark color`
+- [x] **Task 6.1** — `chore(seeds): add dev guinea pigs with every mark color`
   `seeds/dev/R__dev_seed.sql`, con `ON CONFLICT DO NOTHING` para que se pueda volver a correr.
-- [ ] **Task 6.2** — `chore(seeds): add dev test user with a known BCrypt password`
+- [x] **Task 6.2** — `chore(seeds): add dev test user with a known BCrypt password`
   Usuario `dev` / `dev-password`, estado `ACTIVE`. El hash se genera con el `BCryptPasswordHasher` del backend; nunca un usuario real.
-- [ ] **Task 6.3** — `chore(seeds): add sample events, alerts and weight readings`
+- [x] **Task 6.3** — `chore(seeds): add sample events, alerts and weight readings`
   Para que el dashboard tenga datos al desarrollar sin el fake producer.
 
 ### Task 7 — Ajustes que pida el backend
@@ -107,3 +107,8 @@
 
 - [ ] **Task 9.1** — `docs(schema): add final ER diagram for the report`
 - [ ] **Task 9.2** — `docs: update README with setup, migrations and RDS notes`
+
+### Task 10 — Integración continua
+
+- [x] **Task 10.1** — `ci: check migrations on every pull request`
+  GitHub Actions con Postgres 18: aplica `migrations/` desde cero, `flyway validate`, corre `seeds/dev/` dos veces (tiene que ser idempotente), construye la imagen `migrate` y falla si un PR edita o borra una migración que ya está en `main`.

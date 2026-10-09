@@ -1,0 +1,81 @@
+name: migrations
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  FLYWAY_IMAGE: flyway/flyway:11.20.3-alpine
+  FLYWAY_URL: jdbc:postgresql://localhost:5432/cuymonitor
+  FLYWAY_USER: cuymonitor
+  FLYWAY_PASSWORD: cuymonitor
+
+jobs:
+  migrations:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: cuymonitor
+          POSTGRES_USER: cuymonitor
+          POSTGRES_PASSWORD: cuymonitor
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cuymonitor -d cuymonitor"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # rule 1 of AGENTS.md: a migration that is already on main is never edited, renamed or deleted
+      - name: Migrations on main are untouched
+        if: github.event_name == 'pull_request'
+        run: |
+          changed=$(git diff --name-status "origin/${{ github.base_ref }}...HEAD" -- migrations/ | grep -v '^A' || true)
+          if [ -n "$changed" ]; then
+            echo "These migrations already exist on ${{ github.base_ref }} and were changed:"
+            echo "$changed"
+            exit 1
+          fi
+
+      - name: Apply migrations to an empty database
+        run: >
+          docker run --rm --network host
+          -v "$PWD/migrations:/flyway/sql/migrations:ro"
+          -v "$PWD/flyway.conf:/flyway/conf/flyway.conf:ro"
+          -e FLYWAY_URL -e FLYWAY_USER -e FLYWAY_PASSWORD
+          -e FLYWAY_LOCATIONS=filesystem:/flyway/sql/migrations
+          "$FLYWAY_IMAGE" migrate
+
+      - name: Validate checksums
+        run: >
+          docker run --rm --network host
+          -v "$PWD/migrations:/flyway/sql/migrations:ro"
+          -v "$PWD/flyway.conf:/flyway/conf/flyway.conf:ro"
+          -e FLYWAY_URL -e FLYWAY_USER -e FLYWAY_PASSWORD
+          -e FLYWAY_LOCATIONS=filesystem:/flyway/sql/migrations
+          "$FLYWAY_IMAGE" validate
+
+      # the dev seed is a repeatable migration, so it has to survive running twice
+      - name: Dev seeds apply and are idempotent
+        run: |
+          for run in 1 2; do
+            docker run --rm --network host \
+              -v "$PWD/migrations:/flyway/sql/migrations:ro" \
+              -v "$PWD/seeds/dev:/flyway/sql/seeds:ro" \
+              -v "$PWD/flyway.conf:/flyway/conf/flyway.conf:ro" \
+              -e FLYWAY_URL -e FLYWAY_USER -e FLYWAY_PASSWORD \
+              -e FLYWAY_LOCATIONS=filesystem:/flyway/sql/migrations,filesystem:/flyway/sql/seeds \
+              "$FLYWAY_IMAGE" migrate
+          done
+
+      - name: Build the migrate image
+        run: docker build -t cuy-monitor-db-migrate:ci .
