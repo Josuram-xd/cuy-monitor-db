@@ -37,7 +37,8 @@ cuy-monitor-db/
 │   ├── V4__create_health_tables.sql    guinea_pig, event, state_transition, alert, weight_reading, baseline_profile
 │   ├── V5__create_revoked_token.sql    revoked_token (JWT logout)
 │   ├── V6__create_refresh_token.sql    refresh_token (session renewal)
-│   └── V7__add_google_login_to_app_user.sql   password_hash nullable, google_subject (sign in with Google)
+│   ├── V7__add_google_login_to_app_user.sql   password_hash nullable, google_subject (sign in with Google)
+│   └── V8__add_profile_to_guinea_pig.sql      breed, coat_color, initial_weight_grams, notes
 ├── seeds/dev/
 │   └── R__dev_seed.sql                 repeatable, dev only: guinea pigs, test user, sample readings
 ├── docker-compose.yml                  postgres:18 + flyway (local)
@@ -182,7 +183,7 @@ Constraint `ck_revoked_token_expires`. Index `ix_revoked_token_expires_at (expir
 | `expires_at` | `TIMESTAMPTZ` NOT NULL, `> created_at` | 7 days; index `ix_refresh_token_expires_at` for the cleanup |
 | `revoked_at` | `TIMESTAMPTZ` NULL | Set when the token is rotated or on logout. A rotated token that shows up again means theft: the backend revokes the whole family |
 
-### `guinea_pig` — V4
+### `guinea_pig` — V4, V8
 
 | Column | Type | Notes |
 |---|---|---|
@@ -194,6 +195,12 @@ Constraint `ck_revoked_token_expires`. Index `ix_revoked_token_expires_at (expir
 | `status_since` | `TIMESTAMPTZ` NOT NULL default `now()` | When `current_status` last changed (`statusSince` in the REST API) |
 | `active` | `BOOLEAN` NOT NULL default `true` | Soft delete |
 | `created_at` | `TIMESTAMPTZ` NOT NULL default `now()` | |
+| `breed` | `VARCHAR(20)` NULL, `ck_guinea_pig_breed` (V8) | `AMERICAN, PERUVIAN, ABYSSINIAN, TEDDY, SILKIE, SKINNY, CRESTED, OTHER` |
+| `coat_color` | `VARCHAR(20)` NULL, `ck_guinea_pig_coat_color` (V8) | `WHITE, BLACK, BROWN, CREAM, GRAY, CINNAMON, BICOLOR, TRICOLOR` |
+| `initial_weight_grams` | `INTEGER` NULL, `ck_guinea_pig_initial_weight_grams` (V8) | Weight on arrival, 50 to 2000 g |
+| `notes` | `VARCHAR(500)` NULL (V8) | Free text: character, allergies, history |
+
+The four V8 columns are optional: guinea pigs registered before it keep `NULL`.
 
 `uq_guinea_pig_cage_color (cage_id, mark_color)`: one color per guinea pig per cage. (If inactive guinea pigs must free their color, change it to a partial unique index `WHERE active` in a later migration.)
 
