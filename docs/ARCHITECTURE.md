@@ -36,7 +36,8 @@ cuy-monitor-db/
 │   ├── V3__add_code_to_cage.sql        public cage code 'cage-1'
 │   ├── V4__create_health_tables.sql    guinea_pig, event, state_transition, alert, weight_reading, baseline_profile
 │   ├── V5__create_revoked_token.sql    revoked_token (JWT logout)
-│   └── V6__create_refresh_token.sql    refresh_token (session renewal)
+│   ├── V6__create_refresh_token.sql    refresh_token (session renewal)
+│   └── V7__add_google_login_to_app_user.sql   password_hash nullable, google_subject (sign in with Google)
 ├── seeds/dev/
 │   └── R__dev_seed.sql                 repeatable, dev only: guinea pigs, test user, sample readings
 ├── docker-compose.yml                  postgres:18 + flyway (local)
@@ -128,7 +129,7 @@ Enum values must match `cuy-monitor-backend/docs/contracts/`. All timestamps are
 
 > Why V3: the contracts use `cageId: "cage-1"` but V1 created a numeric id. V1 can't be edited, so V3 adds `code`, fills the pilot cage and makes it `NOT NULL UNIQUE`.
 
-### `app_user` — V2
+### `app_user` — V2, V7
 
 | Column | Type | Notes |
 |---|---|---|
@@ -136,9 +137,12 @@ Enum values must match `cuy-monitor-backend/docs/contracts/`. All timestamps are
 | `username` | `VARCHAR(50)` NOT NULL, `uq_app_user_username` | |
 | `full_name` | `VARCHAR(150)` NOT NULL | |
 | `email` | `VARCHAR(254)` NOT NULL, `uq_app_user_email` | |
-| `password_hash` | `VARCHAR(100)` NOT NULL | BCrypt, never plain text |
+| `password_hash` | `VARCHAR(100)` NULL (V7) | BCrypt, never plain text. NULL for an account created with Google that never set a password |
+| `google_subject` | `VARCHAR(255)` NULL, `uq_app_user_google_subject` (V7) | Google's stable user id (`sub`). Accounts are matched by this, never by email alone |
 | `status` | `VARCHAR(30)` NOT NULL, `ck_app_user_status` | `PENDING_VERIFICATION`, `ACTIVE`, `DISABLED` |
 | `created_at`, `updated_at` | `TIMESTAMPTZ` NOT NULL | |
+
+`ck_app_user_login_method` (V7): `password_hash IS NOT NULL OR google_subject IS NOT NULL`, so every account can sign in some way.
 
 One kind of user only: there is no `role` column on purpose.
 
