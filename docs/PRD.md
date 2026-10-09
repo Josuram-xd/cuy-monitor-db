@@ -24,7 +24,7 @@ No tiene usuario final. Sus "clientes" son:
 | Jaula y cuyes | `cage`, `guinea_pig` | Jaula piloto y cuyes registrados con su marca de color |
 | Salud | `event`, `state_transition`, `alert`, `baseline_profile` | Eventos recibidos, cambios de estado, alertas, perfil normal de cada cuy |
 | Peso | `weight_reading` | Lecturas estables del Arduino |
-| Usuarios | `app_user`, `otp_challenge`, `revoked_token` | Cuentas de quienes miran el dashboard (un solo tipo de usuario), códigos OTP de login y tokens JWT revocados al cerrar sesión |
+| Usuarios | `app_user`, `otp_challenge`, `revoked_token`, `refresh_token` | Cuentas de quienes miran el dashboard (un solo tipo de usuario), códigos OTP de login, tokens JWT revocados al cerrar sesión y tokens de renovación de sesión |
 | Flyway | `flyway_schema_history` | Qué migraciones se aplicaron (la crea Flyway) |
 
 ## 4. Requisitos funcionales
