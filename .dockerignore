@@ -1,0 +1,5 @@
+# The migrate image only needs these files; everything else stays out (seeds, .env, docs).
+*
+!flyway.conf
+!migrations/
+!scripts/migrate-entrypoint.sh
