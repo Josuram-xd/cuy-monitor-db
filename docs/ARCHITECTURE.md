@@ -35,7 +35,8 @@ cuy-monitor-db/
 │   ├── V2__create_app_user_and_otp_challenge.sql                    (moved from the backend, unchanged)
 │   ├── V3__add_code_to_cage.sql        public cage code 'cage-1'
 │   ├── V4__create_health_tables.sql    guinea_pig, event, state_transition, alert, weight_reading, baseline_profile
-│   └── V5__create_revoked_token.sql    revoked_token (JWT logout)
+│   ├── V5__create_revoked_token.sql    revoked_token (JWT logout)
+│   └── V6__create_refresh_token.sql    refresh_token (session renewal)
 ├── seeds/dev/
 │   └── R__dev_seed.sql                 repeatable, dev only: guinea pigs, test user, sample readings
 ├── docker-compose.yml                  postgres:18 + flyway (local)
@@ -165,6 +166,18 @@ Index `ix_otp_challenge_user_pending (user_id) WHERE used_at IS NULL AND revoked
 
 Constraint `ck_revoked_token_expires`. Index `ix_revoked_token_expires_at (expires_at)` for the cleanup. The backend rejects any token whose `jti` is here.
 
+### `refresh_token` — V6
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `UUID` PK | `pk_refresh_token` |
+| `user_id` | `UUID` NOT NULL → `app_user(id)` | `fk_refresh_token_user`, index `ix_refresh_token_user_id` |
+| `family_id` | `UUID` NOT NULL | All tokens born from one login share it; index `ix_refresh_token_family_id` |
+| `token_hash` | `VARCHAR(64)` NOT NULL, unique | SHA-256 (hex) of the random cookie value; the value itself is never stored (`uq_refresh_token_token_hash`) |
+| `created_at` | `TIMESTAMPTZ` NOT NULL default `now()` | |
+| `expires_at` | `TIMESTAMPTZ` NOT NULL, `> created_at` | 7 days; index `ix_refresh_token_expires_at` for the cleanup |
+| `revoked_at` | `TIMESTAMPTZ` NULL | Set when the token is rotated or on logout. A rotated token that shows up again means theft: the backend revokes the whole family |
+
 ### `guinea_pig` — V4
 
 | Column | Type | Notes |
@@ -270,6 +283,7 @@ cage 1 ──< guinea_pig 1 ──< state_transition
   └──< weight_reading
 
 app_user 1 ──< otp_challenge          (not linked to cage: every user sees the pilot cage)
+app_user 1 ──< refresh_token          (family_id groups the rotations of one login)
 revoked_token                         (standalone: jti of logged-out JWTs)
 ```
 
