@@ -22,7 +22,7 @@ CROSS JOIN (VALUES
     ('Chispa', 'ORANGE', 'ALERT',    interval '35 minutes', 'ABYSSINIAN', 'BICOLOR',  820, '[demo] Muy activa, suele ser la primera en el comedero.')
 ) AS v (name, mark_color, status, since, breed, coat, grams, notes)
 WHERE c.code = 'cage-1'
-ON CONFLICT ON CONSTRAINT uq_guinea_pig_cage_color DO NOTHING;
+ON CONFLICT (cage_id, mark_color) WHERE active DO NOTHING;
 
 -- 2. What is normal for each one (the baseline the health rules compare against) ----------------------------
 INSERT INTO baseline_profile (guinea_pig_id, avg_still_seconds, avg_feeder_visits, avg_group_distance, updated_at)
