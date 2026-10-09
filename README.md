@@ -9,7 +9,7 @@ Esquema de PostgreSQL del Monitor de Salud de Cuyes. Las migraciones **Flyway** 
 | **Tablas de negocio** | **11** |
 | Tabla técnica de Flyway (`flyway_schema_history`) | 1 (12 tablas en total en PostgreSQL) |
 | Relaciones (claves foráneas) | **10** |
-| Migraciones | **8** (`V1` a `V8`) |
+| Migraciones | **9** (`V1` a `V9`) |
 | Motor | PostgreSQL 18 (Amazon RDS en producción) |
 
 Las 11 tablas se reparten en dos áreas: **usuarios y sesión** (4) y **jaula y salud** (7).
@@ -171,7 +171,7 @@ erDiagram
 | `weight_reading` | `cage_id` | `cage(id)` | `fk_weight_reading_cage` |
 | `baseline_profile` | `guinea_pig_id` | `guinea_pig(id)` | `fk_baseline_profile_guinea_pig` (es también su clave primaria) |
 
-Restricciones de unicidad: `app_user` (`username`, `email`, `google_subject`), `cage.code`, `refresh_token.token_hash` y `guinea_pig (cage_id, mark_color)`, que impide dos cuyes con la misma marca en una jaula.
+Restricciones de unicidad: `app_user` (`username`, `email`, `google_subject`), `cage.code`, `refresh_token.token_hash` y `guinea_pig (cage_id, mark_color)` entre los cuyes **activos** (índice único parcial), que impide dos cuyes con la misma marca en una jaula; un cuy eliminado libera su color.
 
 Los valores permitidos de cada enumeración (`HealthStatus`, `MarkColor`, raza, color del pelaje…) se validan con `CHECK`, no con tipos `ENUM`. Columnas, tipos y restricciones completas en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
@@ -187,6 +187,7 @@ Los valores permitidos de cada enumeración (`HealthStatus`, `MarkColor`, raza, 
 | V6 | `refresh_token` |
 | V7 | Inicio de sesión con Google (`password_hash` opcional, `google_subject`) |
 | V8 | Raza, color del pelaje, peso inicial y notas del cuy |
+| V9 | Un cuy eliminado (borrado lógico) libera su color: unicidad solo entre los activos |
 
 Además hay un seed solo para desarrollo (`seeds/dev/R__dev_seed.sql`), que nunca se aplica en producción.
 

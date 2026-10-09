@@ -16,7 +16,7 @@ CROSS JOIN (VALUES
     ('Nieve', 'WHITE')
 ) AS g (name, mark_color)
 WHERE c.code = 'cage-1'
-ON CONFLICT ON CONSTRAINT uq_guinea_pig_cage_color DO NOTHING;
+ON CONFLICT (cage_id, mark_color) WHERE active DO NOTHING;
 
 -- Test account dev / dev-password, already ACTIVE so it can log in right away (the OTP still goes to the log
 -- with the backend's dev profile). The hash was made with the backend's BCryptPasswordHasher. Never a real user.
