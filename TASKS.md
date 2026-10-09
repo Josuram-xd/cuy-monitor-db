@@ -31,9 +31,9 @@
 
 🔗 **Depende de:** Task 1
 
-- [ ] **Task 2.1** — `feat(schema): move V1 initial schema from the backend`
+- [x] **Task 2.1** — `feat(schema): move V1 initial schema from the backend`
   Copiar `cuy-monitor-backend/src/main/resources/db/migration/V1__initial_schema.sql` **sin cambiar ni un byte** (mismo checksum).
-- [ ] **Task 2.2** — `feat(schema): move V2 app_user and otp_challenge from the backend`
+- [x] **Task 2.2** — `feat(schema): move V2 app_user and otp_challenge from the backend`
   Igual que la anterior, con `V2__create_app_user_and_otp_challenge.sql`.
 - [ ] **Task 2.3** — *(sin commit)* `docker compose up -d` desde cero y `flyway validate` sin errores
 
@@ -43,11 +43,11 @@
 
 🔗 **Depende de:** Task 2 · `cuy-monitor-backend` Task 3.2 (enums en los contratos) · revisar columnas con `cuy-monitor-backend` Task 4.5
 
-- [ ] **Task 3.1** — `feat(schema): add V3 public code to cage`
+- [x] **Task 3.1** — `feat(schema): add V3 public code to cage`
   `ALTER TABLE cage ADD COLUMN code VARCHAR(50)`, poner `cage-1` a la jaula piloto, después `NOT NULL` + `uq_cage_code`. Así el `cageId` de los contratos existe en la base.
-- [ ] **Task 3.2** — `feat(schema): add V4 health tables`
+- [x] **Task 3.2** — `feat(schema): add V4 health tables`
   `guinea_pig`, `event`, `state_transition`, `alert`, `weight_reading`, `baseline_profile` con sus FK, `CHECK` de enums, `uq_guinea_pig_cage_color` e índices de la sección 4 de `docs/ARCHITECTURE.md`.
-- [ ] **Task 3.3** — `docs(schema): update data dictionary and ER diagram`
+- [x] **Task 3.3** — `docs(schema): update data dictionary and ER diagram`
 - [ ] **Task 3.4** — *(sin commit)* probar a mano en `psql`: `event.id` repetido, color repetido en la jaula y valor de enum inválido tienen que fallar
 
 🔓 **Desbloquea:** `cuy-monitor-backend` Task 4.6–4.8 (entidades JPA y adaptadores de salud)

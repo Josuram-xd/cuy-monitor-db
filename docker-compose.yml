@@ -29,12 +29,13 @@ services:
       - ./migrations:/flyway/sql/migrations:ro
       - ./seeds/dev:/flyway/sql/seeds:ro
       - ./flyway.conf:/flyway/conf/flyway.conf:ro
-    command: >
-      -url=jdbc:postgresql://postgres:5432/cuymonitor
-      -user=cuymonitor
-      -password=cuymonitor
-      -locations=filesystem:/flyway/sql/migrations,filesystem:/flyway/sql/seeds
-      migrate
+    # connection in env vars, not in "command", so "docker compose run --rm flyway info|validate" keeps it
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/cuymonitor
+      FLYWAY_USER: cuymonitor
+      FLYWAY_PASSWORD: cuymonitor
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql/migrations,filesystem:/flyway/sql/seeds
+    command: migrate
 
 volumes:
   pgdata-dev:

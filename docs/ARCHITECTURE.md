@@ -88,10 +88,11 @@ services:
     volumes: [pgdata-dev:/var/lib/postgresql]     # Postgres 18 layout: NOT .../data
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U cuymonitor -d cuymonitor"], interval: 5s, retries: 10 }
   flyway:
-    image: flyway/flyway:11-alpine
+    image: flyway/flyway:11.20.3-alpine
     depends_on: { postgres: { condition: service_healthy } }
     volumes: ["./migrations:/flyway/sql/migrations:ro", "./seeds/dev:/flyway/sql/seeds:ro", "./flyway.conf:/flyway/conf/flyway.conf:ro"]
-    command: -url=jdbc:postgresql://postgres:5432/cuymonitor -user=cuymonitor -password=cuymonitor -locations=filesystem:/flyway/sql/migrations,filesystem:/flyway/sql/seeds migrate
+    environment: { FLYWAY_URL: "jdbc:postgresql://postgres:5432/cuymonitor", FLYWAY_USER: cuymonitor, FLYWAY_PASSWORD: cuymonitor, FLYWAY_LOCATIONS: "filesystem:/flyway/sql/migrations,filesystem:/flyway/sql/seeds" }
+    command: migrate      # connection lives in env vars, so `docker compose run --rm flyway info|validate` works too
 volumes:
   pgdata-dev:
 ```
@@ -148,9 +149,10 @@ Index `ix_otp_challenge_user_pending (user_id) WHERE used_at IS NULL AND revoked
 |---|---|---|
 | `id` | `BIGSERIAL` PK | |
 | `cage_id` | `BIGINT` NOT NULL → `cage(id)` | |
-| `name` | `VARCHAR(100)` NOT NULL | |
+| `name` | `VARCHAR(100)` NOT NULL, `ck_guinea_pig_name` | Not blank |
 | `mark_color` | `VARCHAR(20)` NOT NULL, CHECK | `RED, BLUE, GREEN, YELLOW, ORANGE, PURPLE, BLACK, WHITE` |
 | `current_status` | `VARCHAR(20)` NOT NULL default `NORMAL`, CHECK | `NORMAL, OBSERVED, ALERT, CRITICAL` |
+| `status_since` | `TIMESTAMPTZ` NOT NULL default `now()` | When `current_status` last changed (`statusSince` in the REST API) |
 | `active` | `BOOLEAN` NOT NULL default `true` | Soft delete |
 | `created_at` | `TIMESTAMPTZ` NOT NULL default `now()` | |
 
@@ -169,7 +171,9 @@ Index `ix_otp_challenge_user_pending (user_id) WHERE used_at IS NULL AND revoked
 | `received_at` | `TIMESTAMPTZ` NOT NULL default `now()` | |
 | `payload` | `JSONB` NOT NULL | Raw payload |
 
-Index `ix_event_guinea_pig_occurred (guinea_pig_id, occurred_at DESC)` for history and the sustained-anomaly check.
+`ck_event_guinea_pig_scope`: `guinea_pig_id` is set **only** for `BEHAVIOR`.
+
+Indexes `ix_event_guinea_pig_occurred (guinea_pig_id, occurred_at DESC)` for history and the sustained-anomaly check, and `ix_event_cage_type_occurred (cage_id, type, occurred_at DESC)` for the latest audio of a cage.
 
 ### `state_transition` — V4
 
@@ -178,8 +182,10 @@ Index `ix_event_guinea_pig_occurred (guinea_pig_id, occurred_at DESC)` for histo
 | `id` | `BIGSERIAL` PK | |
 | `guinea_pig_id` | `BIGINT` NOT NULL → `guinea_pig(id)` | |
 | `from_status`, `to_status` | `VARCHAR(20)` NOT NULL, CHECK | `HealthStatus` values |
-| `reason` | `VARCHAR(300)` | |
+| `reason` | `VARCHAR(300)` NOT NULL | Shown in the history (`anomalía sostenida: …`) |
 | `occurred_at` | `TIMESTAMPTZ` NOT NULL | |
+
+`ck_state_transition_changes`: `from_status <> to_status` (staying in the same state is not a transition).
 
 Index `ix_state_transition_guinea_pig_occurred (guinea_pig_id, occurred_at DESC)`.
 
@@ -190,14 +196,16 @@ Index `ix_state_transition_guinea_pig_occurred (guinea_pig_id, occurred_at DESC)
 | `id` | `BIGSERIAL` PK | |
 | `cage_id` | `BIGINT` NOT NULL → `cage(id)` | |
 | `guinea_pig_id` | `BIGINT` NULL → `guinea_pig(id)` | `NULL` for cage-level alerts (audio, weight) |
-| `level` | `VARCHAR(20)` NOT NULL, CHECK | `ALERT, CRITICAL` (and `OBSERVED` if the team decides to store it) |
+| `level` | `VARCHAR(20)` NOT NULL, CHECK | `ALERT, CRITICAL` (going to `OBSERVED` never creates an alert) |
 | `type` | `VARCHAR(20)` NOT NULL, CHECK | `BEHAVIOR, AUDIO, WEIGHT` |
 | `message` | `VARCHAR(500)` NOT NULL | |
 | `status` | `VARCHAR(20)` NOT NULL default `OPEN`, CHECK | `OPEN, REVIEWED` |
 | `created_at` | `TIMESTAMPTZ` NOT NULL default `now()` | |
 | `reviewed_at` | `TIMESTAMPTZ` NULL | |
 
-Index `ix_alert_status_created (status, created_at DESC)` for `GET /api/alerts?status=OPEN`.
+`ck_alert_guinea_pig_scope`: `guinea_pig_id` is set only for `BEHAVIOR` alerts. `ck_alert_reviewed_at`: `reviewed_at` is set if and only if `status = 'REVIEWED'`.
+
+Indexes `ix_alert_status_created (status, created_at DESC)` for `GET /api/v1/alerts?status=OPEN` and `ix_alert_cage_created (cage_id, created_at DESC)`.
 
 ### `weight_reading` — V4
 
@@ -205,7 +213,7 @@ Index `ix_alert_status_created (status, created_at DESC)` for `GET /api/alerts?s
 |---|---|---|
 | `id` | `BIGSERIAL` PK | |
 | `cage_id` | `BIGINT` NOT NULL → `cage(id)` | |
-| `grams` | `NUMERIC(7,1)` NOT NULL | |
+| `grams` | `NUMERIC(7,1)` NOT NULL, `>= 0` | |
 | `stable` | `BOOLEAN` NOT NULL | |
 | `measured_at` | `TIMESTAMPTZ` NOT NULL | |
 
@@ -218,10 +226,12 @@ Index `ix_weight_reading_cage_measured (cage_id, measured_at DESC)`.
 | `guinea_pig_id` | `BIGINT` PK → `guinea_pig(id)` | One profile per guinea pig |
 | `avg_still_seconds` | `NUMERIC(6,2)` NOT NULL | |
 | `avg_feeder_visits` | `NUMERIC(6,2)` NOT NULL | |
-| `avg_group_distance` | `NUMERIC(5,4)` NOT NULL | 0–1 |
+| `avg_group_distance` | `NUMERIC(5,4)` NOT NULL, CHECK 0–1 | |
 | `updated_at` | `TIMESTAMPTZ` NOT NULL | |
 
-The exact columns of V4 are confirmed together with the backend's JPA entities (backend Task 4.5–4.6) before the migration is merged; once merged, changes go in V5+.
+V4 was checked against the backend domain model (backend Task 4.5: `GuineaPig`, `HealthEvent`, `StateTransition`, `Alert`, `WeightReading`, `BaselineProfile`). Once merged, changes go in V5+.
+
+Naming: every constraint and index has an explicit name (`pk_`, `fk_<table>_<ref>`, `uq_`, `ck_<table>_<col>`, `ix_<table>_<cols>`) so errors and future migrations can refer to them.
 
 ---
 
