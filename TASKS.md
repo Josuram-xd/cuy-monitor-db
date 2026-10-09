@@ -107,3 +107,8 @@
 
 - [ ] **Task 9.1** — `docs(schema): add final ER diagram for the report`
 - [ ] **Task 9.2** — `docs: update README with setup, migrations and RDS notes`
+
+### Task 10 — Integración continua
+
+- [x] **Task 10.1** — `ci: check migrations on every pull request`
+  GitHub Actions con Postgres 18: aplica `migrations/` desde cero, `flyway validate`, corre `seeds/dev/` dos veces (tiene que ser idempotente), construye la imagen `migrate` y falla si un PR edita o borra una migración que ya está en `main`.
