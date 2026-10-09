@@ -34,7 +34,8 @@ cuy-monitor-db/
 │   ├── V1__initial_schema.sql          cage + pilot cage            (moved from the backend, unchanged)
 │   ├── V2__create_app_user_and_otp_challenge.sql                    (moved from the backend, unchanged)
 │   ├── V3__add_code_to_cage.sql        public cage code 'cage-1'
-│   └── V4__create_health_tables.sql    guinea_pig, event, state_transition, alert, weight_reading, baseline_profile
+│   ├── V4__create_health_tables.sql    guinea_pig, event, state_transition, alert, weight_reading, baseline_profile
+│   └── V5__create_revoked_token.sql    revoked_token (JWT logout)
 ├── seeds/dev/
 │   └── R__dev_seed.sql                 repeatable, dev only: guinea pigs, test user, sample readings
 ├── docker-compose.yml                  postgres:18 + flyway (local)
@@ -154,6 +155,16 @@ One kind of user only: there is no `role` column on purpose.
 
 Index `ix_otp_challenge_user_pending (user_id) WHERE used_at IS NULL AND revoked_at IS NULL`.
 
+### `revoked_token` — V5
+
+| Column | Type | Notes |
+|---|---|---|
+| `jti` | `UUID` PK | `jti` claim of the revoked JWT (`pk_revoked_token`) |
+| `revoked_at` | `TIMESTAMPTZ` NOT NULL default `now()` | When the user logged out |
+| `expires_at` | `TIMESTAMPTZ` NOT NULL, `> revoked_at` | `exp` of the JWT; after this the row is useless and can be deleted |
+
+Constraint `ck_revoked_token_expires`. Index `ix_revoked_token_expires_at (expires_at)` for the cleanup. The backend rejects any token whose `jti` is here.
+
 ### `guinea_pig` — V4
 
 | Column | Type | Notes |
@@ -259,6 +270,7 @@ cage 1 ──< guinea_pig 1 ──< state_transition
   └──< weight_reading
 
 app_user 1 ──< otp_challenge          (not linked to cage: every user sees the pilot cage)
+revoked_token                         (standalone: jti of logged-out JWTs)
 ```
 
 ---
