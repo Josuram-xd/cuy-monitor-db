@@ -190,12 +190,17 @@ Los valores permitidos de cada enumeración (`HealthStatus`, `MarkColor`, raza, 
 
 Además hay un seed solo para desarrollo (`seeds/dev/R__dev_seed.sql`), que nunca se aplica en producción.
 
+## Datos de demostración
+
+`seeds/demo/demo_data.sql` llena la jaula `cage-1` con 4 cuyes, 80 ventanas de comportamiento, alertas abiertas y revisadas, historial de estados y pesos, para mostrar el dashboard sin cámara ni báscula. Nunca se aplica solo (no es una migración ni va en la imagen `migrate`); se corre con `psql -f` y se puede repetir. Sus filas se reconocen porque las notas del cuy empiezan con `[demo]` y los eventos tienen `source = demo-seed`. `seeds/demo/remove_demo_data.sql` las borra y deja solo los datos reales.
+
 ## Estructura
 
 | Ruta | Contenido |
 |---|---|
 | `migrations/` | Migraciones `V{n}__descripcion.sql` (se aplican en todos los entornos) |
 | `seeds/dev/` | Datos de prueba, solo desarrollo |
+| `seeds/demo/` | Datos de demostración (cuyes, alertas, historial) que se cargan **a mano** para una presentación, y el script que los quita |
 | `scripts/` | Entrada de la imagen de migración |
 | `docs/` | `PRD.md`, `ARCHITECTURE.md` (diccionario de datos) |
 
