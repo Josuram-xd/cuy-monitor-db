@@ -72,6 +72,14 @@ erDiagram
         varchar location
         timestamptz created_at
     }
+    catalog_option {
+        varchar kind PK
+        varchar code PK
+        varchar label
+        char hex
+        smallint sort_order
+        boolean active
+    }
     guinea_pig {
         bigint id PK
         bigint cage_id FK
@@ -149,7 +157,8 @@ erDiagram
 | Tabla | Migración | Para qué sirve |
 |---|---|---|
 | `cage` | V1, V3 | La jaula. Se identifica por un `code` (`cage-1`) que usan las cámaras y el dashboard |
-| `guinea_pig` | V4, V8 | Cada cuy: nombre, color de marca (único por jaula), estado actual, y opcionalmente raza, color del pelaje, peso inicial y notas |
+| `catalog_option` | V10 | Las listas que el criador puede cambiar sin tocar código: colores de marca, razas y colores de pelaje (código, etiqueta en español, color y orden) |
+| `guinea_pig` | V4, V8, V10 | Cada cuy: nombre, color de marca (único por jaula), estado actual, y opcionalmente raza, color del pelaje, peso inicial y notas |
 | `event` | V4 | Eventos que llegan de cámara, micrófono y báscula (`BEHAVIOR`, `AUDIO`, `WEIGHT`), con el JSON original en `payload` |
 | `state_transition` | V4 | Historial de cambios de estado de cada cuy (`NORMAL`, `OBSERVED`, `ALERT`, `CRITICAL`) y su motivo |
 | `alert` | V4 | Alertas abiertas o revisadas; pueden ser de un cuy o de toda la jaula (`guinea_pig_id` nulo) |
@@ -188,6 +197,7 @@ Los valores permitidos de cada enumeración (`HealthStatus`, `MarkColor`, raza, 
 | V7 | Inicio de sesión con Google (`password_hash` opcional, `google_subject`) |
 | V8 | Raza, color del pelaje, peso inicial y notas del cuy |
 | V9 | Un cuy eliminado (borrado lógico) libera su color: unicidad solo entre los activos |
+| V10 | `catalog_option`: colores de marca, razas y colores de pelaje salen de la base, no del código |
 
 Además hay un seed solo para desarrollo (`seeds/dev/R__dev_seed.sql`), que nunca se aplica en producción.
 

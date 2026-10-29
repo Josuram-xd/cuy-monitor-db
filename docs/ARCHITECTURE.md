@@ -184,24 +184,45 @@ Constraint `ck_revoked_token_expires`. Index `ix_revoked_token_expires_at (expir
 | `expires_at` | `TIMESTAMPTZ` NOT NULL, `> created_at` | 7 days; index `ix_refresh_token_expires_at` for the cleanup |
 | `revoked_at` | `TIMESTAMPTZ` NULL | Set when the token is rotated or on logout. A rotated token that shows up again means theft: the backend revokes the whole family |
 
-### `guinea_pig` — V4, V8, V9
+### `catalog_option` — V10
+
+Lists the breeder can change without touching code: the mark colors the camera tells apart, the breeds and
+the coat colors. The backend serves the active rows to the dashboard, which has no list of its own.
+
+| Column | Type | Notes |
+|---|---|---|
+| `kind` | `VARCHAR(20)` NOT NULL, `ck_catalog_option_kind` | `MARK_COLOR`, `COAT_COLOR`, `BREED`. Part of `pk_catalog_option` |
+| `code` | `VARCHAR(20)` NOT NULL, `ck_catalog_option_code` | What gets stored in `guinea_pig` and travels in the API (`RED`, `TEDDY`). Upper case, letters, digits and `_` |
+| `label` | `VARCHAR(60)` NOT NULL | What the breeder reads, in Spanish ("Rojo", "Sedoso (Silkie)") |
+| `hex` | `CHAR(7)` NULL, `ck_catalog_option_hex` | Color of the dot the dashboard paints (`#d62828`). `NULL` for a breed, which has no sample |
+| `sort_order` | `SMALLINT` NOT NULL | Order on screen; index `ix_catalog_option_kind_sort` |
+| `active` | `BOOLEAN` NOT NULL default `true` | `false` hides it from new registrations and keeps the guinea pigs that already use it |
+
+Adding a color is one `INSERT`; renaming one is an `UPDATE` of `label`. Retiring one is `active = false`, never a
+`DELETE`, so the guinea pigs wearing it keep a readable value.
+
+### `guinea_pig` — V4, V8, V9, V10
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `BIGSERIAL` PK | |
 | `cage_id` | `BIGINT` NOT NULL → `cage(id)` | |
 | `name` | `VARCHAR(100)` NOT NULL, `ck_guinea_pig_name` | Not blank |
-| `mark_color` | `VARCHAR(20)` NOT NULL, CHECK | `RED, BLUE, GREEN, YELLOW, ORANGE, PURPLE, BLACK, WHITE` |
+| `mark_color` | `VARCHAR(20)` NOT NULL | A `MARK_COLOR` code of `catalog_option` (V10 dropped the CHECK that repeated the list) |
 | `current_status` | `VARCHAR(20)` NOT NULL default `NORMAL`, CHECK | `NORMAL, OBSERVED, ALERT, CRITICAL` |
 | `status_since` | `TIMESTAMPTZ` NOT NULL default `now()` | When `current_status` last changed (`statusSince` in the REST API) |
 | `active` | `BOOLEAN` NOT NULL default `true` | Soft delete |
 | `created_at` | `TIMESTAMPTZ` NOT NULL default `now()` | |
-| `breed` | `VARCHAR(20)` NULL, `ck_guinea_pig_breed` (V8) | `AMERICAN, PERUVIAN, ABYSSINIAN, TEDDY, SILKIE, SKINNY, CRESTED, OTHER` |
-| `coat_color` | `VARCHAR(20)` NULL, `ck_guinea_pig_coat_color` (V8) | `WHITE, BLACK, BROWN, CREAM, GRAY, CINNAMON, BICOLOR, TRICOLOR` |
+| `breed` | `VARCHAR(20)` NULL (V8) | A `BREED` code of `catalog_option` (V10 dropped the CHECK) |
+| `coat_color` | `VARCHAR(20)` NULL (V8) | A `COAT_COLOR` code of `catalog_option` (V10 dropped the CHECK) |
 | `initial_weight_grams` | `INTEGER` NULL, `ck_guinea_pig_initial_weight_grams` (V8) | Weight on arrival, 50 to 2000 g |
 | `notes` | `VARCHAR(500)` NULL (V8) | Free text: character, allergies, history |
 
 The four V8 columns are optional: guinea pigs registered before it keep `NULL`.
+
+There is no foreign key to `catalog_option`: its primary key is `(kind, code)`, so a real FK would need a
+constant `kind` column on `guinea_pig` for each of the three references. The backend rejects a code that is
+not an active row instead.
 
 `uq_guinea_pig_cage_color` (V9): a **partial unique index** on `(cage_id, mark_color) WHERE active`. One color per active guinea pig in a cage; deleting a guinea pig is a soft delete (`active = false`), keeps its history and frees its color.
 
