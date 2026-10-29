@@ -83,7 +83,8 @@ erDiagram
     guinea_pig {
         bigint id PK
         bigint cage_id FK
-        varchar name
+        bytea photo
+        varchar photo_content_type
         varchar mark_color "UK con cage_id"
         varchar current_status
         timestamptz status_since
@@ -158,7 +159,7 @@ erDiagram
 |---|---|---|
 | `cage` | V1, V3 | La jaula. Se identifica por un `code` (`cage-1`) que usan las cámaras y el dashboard |
 | `catalog_option` | V10 | Las listas que el criador puede cambiar sin tocar código: colores de marca, razas y colores de pelaje (código, etiqueta en español, color y orden) |
-| `guinea_pig` | V4, V8, V10 | Cada cuy: nombre, color de marca (único por jaula), estado actual, y opcionalmente raza, color del pelaje, peso inicial y notas |
+| `guinea_pig` | V4, V8, V10, V11 | Cada cuy: su foto, color de marca (único por jaula), estado actual, y opcionalmente raza, color del pelaje, peso inicial y notas |
 | `event` | V4 | Eventos que llegan de cámara, micrófono y báscula (`BEHAVIOR`, `AUDIO`, `WEIGHT`), con el JSON original en `payload` |
 | `state_transition` | V4 | Historial de cambios de estado de cada cuy (`NORMAL`, `OBSERVED`, `ALERT`, `CRITICAL`) y su motivo |
 | `alert` | V4 | Alertas abiertas o revisadas; pueden ser de un cuy o de toda la jaula (`guinea_pig_id` nulo) |
@@ -198,6 +199,7 @@ Los valores permitidos de cada enumeración (`HealthStatus`, `MarkColor`, raza, 
 | V8 | Raza, color del pelaje, peso inicial y notas del cuy |
 | V9 | Un cuy eliminado (borrado lógico) libera su color: unicidad solo entre los activos |
 | V10 | `catalog_option`: colores de marca, razas y colores de pelaje salen de la base, no del código |
+| V11 | El cuy se registra con su foto en lugar de un nombre (`photo`, `photo_content_type`) |
 
 Además hay un seed solo para desarrollo (`seeds/dev/R__dev_seed.sql`), que nunca se aplica en producción.
 

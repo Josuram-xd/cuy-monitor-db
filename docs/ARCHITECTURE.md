@@ -201,13 +201,13 @@ the coat colors. The backend serves the active rows to the dashboard, which has 
 Adding a color is one `INSERT`; renaming one is an `UPDATE` of `label`. Retiring one is `active = false`, never a
 `DELETE`, so the guinea pigs wearing it keep a readable value.
 
-### `guinea_pig` — V4, V8, V9, V10
+### `guinea_pig` — V4, V8, V9, V10, V11
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `BIGSERIAL` PK | |
 | `cage_id` | `BIGINT` NOT NULL → `cage(id)` | |
-| `name` | `VARCHAR(100)` NOT NULL, `ck_guinea_pig_name` | Not blank |
+| `name` | `VARCHAR(100)` NULL (V11) | **Replaced by `photo`.** The backend no longer reads or writes it; a later migration drops the column |
 | `mark_color` | `VARCHAR(20)` NOT NULL | A `MARK_COLOR` code of `catalog_option` (V10 dropped the CHECK that repeated the list) |
 | `current_status` | `VARCHAR(20)` NOT NULL default `NORMAL`, CHECK | `NORMAL, OBSERVED, ALERT, CRITICAL` |
 | `status_since` | `TIMESTAMPTZ` NOT NULL default `now()` | When `current_status` last changed (`statusSince` in the REST API) |
@@ -217,8 +217,11 @@ Adding a color is one `INSERT`; renaming one is an `UPDATE` of `label`. Retiring
 | `coat_color` | `VARCHAR(20)` NULL (V8) | A `COAT_COLOR` code of `catalog_option` (V10 dropped the CHECK) |
 | `initial_weight_grams` | `INTEGER` NULL, `ck_guinea_pig_initial_weight_grams` (V8) | Weight on arrival, 50 to 2000 g |
 | `notes` | `VARCHAR(500)` NULL (V8) | Free text: character, allergies, history |
+| `photo` | `BYTEA` NULL, `ck_guinea_pig_photo_size` (V11) | How the breeder recognizes the cuy, instead of a name. 1 byte to 300 KB; the dashboard shrinks the picture before sending it |
+| `photo_content_type` | `VARCHAR(30)` NULL, `ck_guinea_pig_photo_content_type` (V11) | `image/jpeg`, `image/png` or `image/webp`. Null exactly when `photo` is null (`ck_guinea_pig_photo`) |
 
-The four V8 columns are optional: guinea pigs registered before it keep `NULL`.
+The four V8 columns are optional: guinea pigs registered before it keep `NULL`. The photo is required by the
+REST API when registering, but the column is nullable so the cuyes registered before V11 stay readable.
 
 There is no foreign key to `catalog_option`: its primary key is `(kind, code)`, so a real FK would need a
 constant `kind` column on `guinea_pig` for each of the three references. The backend rejects a code that is
