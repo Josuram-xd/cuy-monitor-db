@@ -6,10 +6,10 @@ Esquema de PostgreSQL del Monitor de Salud de Cuyes. Las migraciones **Flyway** 
 
 | | |
 |---|---|
-| **Tablas de negocio** | **11** |
-| Tabla técnica de Flyway (`flyway_schema_history`) | 1 (12 tablas en total en PostgreSQL) |
-| Relaciones (claves foráneas) | **10** |
-| Migraciones | **9** (`V1` a `V9`) |
+| **Tablas de negocio** | **12** |
+| Tabla técnica de Flyway (`flyway_schema_history`) | 1 (13 tablas en total en PostgreSQL) |
+| Relaciones (claves foráneas) | **11** |
+| Migraciones | **12** (`V1` a `V12`) |
 | Motor | PostgreSQL 18 (Amazon RDS en producción) |
 
 Las 11 tablas se reparten en dos áreas: **usuarios y sesión** (4) y **jaula y salud** (7).
@@ -72,10 +72,19 @@ erDiagram
         varchar location
         timestamptz created_at
     }
+    catalog_option {
+        varchar kind PK
+        varchar code PK
+        varchar label
+        char hex
+        smallint sort_order
+        boolean active
+    }
     guinea_pig {
         bigint id PK
         bigint cage_id FK
-        varchar name
+        bytea photo
+        varchar photo_content_type
         varchar mark_color "UK con cage_id"
         varchar current_status
         timestamptz status_since
@@ -149,7 +158,8 @@ erDiagram
 | Tabla | Migración | Para qué sirve |
 |---|---|---|
 | `cage` | V1, V3, V12 | Cada jaula del criador. Se identifica por un `code` (`cage-1`) que usan las cámaras y el dashboard; tiene dueño (`owner_id`) y borrado lógico (`active`) |
-| `guinea_pig` | V4, V8 | Cada cuy: nombre, color de marca (único por jaula), estado actual, y opcionalmente raza, color del pelaje, peso inicial y notas |
+| `catalog_option` | V10 | Las listas que el criador puede cambiar sin tocar código: colores de marca, razas y colores de pelaje (código, etiqueta en español, color y orden) |
+| `guinea_pig` | V4, V8, V10, V11 | Cada cuy: su foto, color de marca (único por jaula), estado actual, y opcionalmente raza, color del pelaje, peso inicial y notas |
 | `event` | V4 | Eventos que llegan de cámara, micrófono y báscula (`BEHAVIOR`, `AUDIO`, `WEIGHT`), con el JSON original en `payload` |
 | `state_transition` | V4 | Historial de cambios de estado de cada cuy (`NORMAL`, `OBSERVED`, `ALERT`, `CRITICAL`) y su motivo |
 | `alert` | V4 | Alertas abiertas o revisadas; pueden ser de un cuy o de toda la jaula (`guinea_pig_id` nulo) |
@@ -189,7 +199,9 @@ Los valores permitidos de cada enumeración (`HealthStatus`, `MarkColor`, raza, 
 | V7 | Inicio de sesión con Google (`password_hash` opcional, `google_subject`) |
 | V8 | Raza, color del pelaje, peso inicial y notas del cuy |
 | V9 | Un cuy eliminado (borrado lógico) libera su color: unicidad solo entre los activos |
-| V12 | Varias jaulas por cuenta: dueño (`owner_id`) y borrado lógico (`active`) de la jaula. V10 y V11 están en ramas abiertas |
+| V10 | `catalog_option`: colores de marca, razas y colores de pelaje salen de la base, no del código |
+| V11 | El cuy se registra con su foto en lugar de un nombre (`photo`, `photo_content_type`) |
+| V12 | Varias jaulas por cuenta: dueño (`owner_id`) y borrado lógico (`active`) de la jaula |
 
 Además hay un seed solo para desarrollo (`seeds/dev/R__dev_seed.sql`), que nunca se aplica en producción.
 
