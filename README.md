@@ -148,7 +148,7 @@ erDiagram
 
 | Tabla | Migración | Para qué sirve |
 |---|---|---|
-| `cage` | V1, V3 | La jaula. Se identifica por un `code` (`cage-1`) que usan las cámaras y el dashboard |
+| `cage` | V1, V3, V12 | Cada jaula del criador. Se identifica por un `code` (`cage-1`) que usan las cámaras y el dashboard; tiene dueño (`owner_id`) y borrado lógico (`active`) |
 | `guinea_pig` | V4, V8 | Cada cuy: nombre, color de marca (único por jaula), estado actual, y opcionalmente raza, color del pelaje, peso inicial y notas |
 | `event` | V4 | Eventos que llegan de cámara, micrófono y báscula (`BEHAVIOR`, `AUDIO`, `WEIGHT`), con el JSON original en `payload` |
 | `state_transition` | V4 | Historial de cambios de estado de cada cuy (`NORMAL`, `OBSERVED`, `ALERT`, `CRITICAL`) y su motivo |
@@ -156,12 +156,13 @@ erDiagram
 | `weight_reading` | V4 | Lecturas de la báscula de la jaula |
 | `baseline_profile` | V4 | Línea base de comportamiento de cada cuy (quietud, visitas al comedero, distancia al grupo), 1 a 1 con `guinea_pig` |
 
-## Relaciones (las 10 claves foráneas)
+## Relaciones (las 11 claves foráneas)
 
 | Tabla origen | Columna | Apunta a | Restricción |
 |---|---|---|---|
 | `otp_challenge` | `user_id` | `app_user(id)` | `fk_otp_challenge_user` |
 | `refresh_token` | `user_id` | `app_user(id)` | `fk_refresh_token_user` |
+| `cage` | `owner_id` | `app_user(id)` | `fk_cage_owner` |
 | `guinea_pig` | `cage_id` | `cage(id)` | `fk_guinea_pig_cage` |
 | `event` | `cage_id` | `cage(id)` | `fk_event_cage` |
 | `event` | `guinea_pig_id` | `guinea_pig(id)` | `fk_event_guinea_pig` (opcional) |
@@ -188,6 +189,7 @@ Los valores permitidos de cada enumeración (`HealthStatus`, `MarkColor`, raza, 
 | V7 | Inicio de sesión con Google (`password_hash` opcional, `google_subject`) |
 | V8 | Raza, color del pelaje, peso inicial y notas del cuy |
 | V9 | Un cuy eliminado (borrado lógico) libera su color: unicidad solo entre los activos |
+| V12 | Varias jaulas por cuenta: dueño (`owner_id`) y borrado lógico (`active`) de la jaula. V10 y V11 están en ramas abiertas |
 
 Además hay un seed solo para desarrollo (`seeds/dev/R__dev_seed.sql`), que nunca se aplica en producción.
 

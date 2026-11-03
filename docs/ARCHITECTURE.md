@@ -39,7 +39,8 @@ cuy-monitor-db/
 │   ├── V6__create_refresh_token.sql    refresh_token (session renewal)
 │   ├── V7__add_google_login_to_app_user.sql   password_hash nullable, google_subject (sign in with Google)
 │   ├── V8__add_profile_to_guinea_pig.sql      breed, coat_color, initial_weight_grams, notes
-│   └── V9__free_color_of_deleted_guinea_pig.sql  unique color only among active guinea pigs
+│   ├── V9__free_color_of_deleted_guinea_pig.sql  unique color only among active guinea pigs
+│   └── V12__add_owner_to_cage.sql      owner_id + active: several cages per account (V10, V11 are in open branches)
 ├── seeds/dev/
 │   └── R__dev_seed.sql                 repeatable, dev only: guinea pigs, test user, sample readings
 ├── docker-compose.yml                  postgres:18 + flyway (local)
@@ -119,15 +120,21 @@ volumes:
 
 Enum values must match `cuy-monitor-backend/docs/contracts/`. All timestamps are `TIMESTAMPTZ` in UTC.
 
-### `cage` — V1, V3
+### `cage` — V1, V3, V12
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `BIGSERIAL` PK | Internal id |
-| `code` | `VARCHAR(50)` NOT NULL, UNIQUE | **V3.** Public id used as `cageId` in events and URLs (`cage-1`). Pilot cage gets `cage-1` |
+| `code` | `VARCHAR(50)` NOT NULL, UNIQUE | **V3.** Public id used as `cageId` in events and URLs (`cage-1`). Pilot cage gets `cage-1`; new cages get one from the backend (`cage-<8 hex>`) |
 | `name` | `VARCHAR(100)` NOT NULL | "Jaula piloto" |
 | `location` | `VARCHAR(200)` | |
 | `created_at` | `TIMESTAMPTZ` NOT NULL default `now()` | |
+| `owner_id` | `UUID` NULL → `app_user(id)` | **V12.** The account that created the cage; only that account can see or change it. `NULL` only for a pilot cage of a database without accounts |
+| `active` | `BOOLEAN` NOT NULL default `TRUE` | **V12.** Soft delete: a removed cage keeps its events, alerts and history |
+
+Index `ix_cage_owner (owner_id) WHERE active` for "my cages".
+
+> Why V12: the product handles several cages per farmer. V12 hands the existing pilot cage to the oldest active account so whoever was already using it keeps seeing it.
 
 > Why V3: the contracts use `cageId: "cage-1"` but V1 created a numeric id. V1 can't be edited, so V3 adds `code`, fills the pilot cage and makes it `NOT NULL UNIQUE`.
 
@@ -294,7 +301,8 @@ cage 1 ──< guinea_pig 1 ──< state_transition
   ├──< alert
   └──< weight_reading
 
-app_user 1 ──< otp_challenge          (not linked to cage: every user sees the pilot cage)
+app_user 1 ──< cage                   (owner_id, V12: each account sees only its own cages)
+app_user 1 ──< otp_challenge
 app_user 1 ──< refresh_token          (family_id groups the rotations of one login)
 revoked_token                         (standalone: jti of logged-out JWTs)
 ```
