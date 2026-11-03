@@ -1,6 +1,5 @@
 -- A farmer can have several cages and only sees their own. Each cage gets an owner (the account that created it)
 -- and a soft delete flag, like guinea_pig: a removed cage keeps its events, alerts and history.
--- V10 and V11 are taken by open branches (catalog_option, guinea pig photo), so this one is V12.
 
 ALTER TABLE cage ADD COLUMN owner_id UUID;
 ALTER TABLE cage ADD COLUMN active BOOLEAN NOT NULL DEFAULT TRUE;

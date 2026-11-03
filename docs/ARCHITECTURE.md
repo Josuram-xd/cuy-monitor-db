@@ -40,7 +40,9 @@ cuy-monitor-db/
 │   ├── V7__add_google_login_to_app_user.sql   password_hash nullable, google_subject (sign in with Google)
 │   ├── V8__add_profile_to_guinea_pig.sql      breed, coat_color, initial_weight_grams, notes
 │   ├── V9__free_color_of_deleted_guinea_pig.sql  unique color only among active guinea pigs
-│   └── V12__add_owner_to_cage.sql      owner_id + active: several cages per account (V10, V11 are in open branches)
+│   ├── V10__create_catalog_option.sql  catalog_option: mark colors, breeds and coat colors in the database
+│   ├── V11__add_photo_to_guinea_pig.sql   photo + photo_content_type: a guinea pig is registered by its photo
+│   └── V12__add_owner_to_cage.sql      owner_id + active: several cages per account
 ├── seeds/dev/
 │   └── R__dev_seed.sql                 repeatable, dev only: guinea pigs, test user, sample readings
 ├── docker-compose.yml                  postgres:18 + flyway (local)

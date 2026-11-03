@@ -109,9 +109,12 @@ INSERT INTO cage (code, name, location, owner_id)
 VALUES ('cage-dev-2', 'Jaula del patio', 'Patio trasero', '00000000-0000-4000-8000-000000000001')
 ON CONFLICT ON CONSTRAINT uq_cage_code DO NOTHING;
 
-INSERT INTO guinea_pig (cage_id, name, mark_color)
-SELECT c.id, g.name, g.mark_color
+-- two cuyes there, identified by the same sample photo of their mark color as in the pilot cage
+INSERT INTO guinea_pig (cage_id, mark_color, photo, photo_content_type)
+SELECT c.id, sample.mark_color, sample.photo, sample.photo_content_type
 FROM cage c
-CROSS JOIN (VALUES ('Tofu', 'WHITE'), ('Mora', 'PURPLE')) AS g (name, mark_color)
+JOIN guinea_pig sample
+  ON sample.cage_id = (SELECT id FROM cage WHERE code = 'cage-1') AND sample.active
+ AND sample.mark_color IN ('WHITE', 'PURPLE')
 WHERE c.code = 'cage-dev-2'
 ON CONFLICT (cage_id, mark_color) WHERE active DO NOTHING;
