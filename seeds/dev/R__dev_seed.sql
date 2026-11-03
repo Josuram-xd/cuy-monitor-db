@@ -66,3 +66,18 @@ CROSS JOIN (VALUES
 ) AS r (grams, ago)
 WHERE c.code = 'cage-1'
   AND NOT EXISTS (SELECT 1 FROM weight_reading w WHERE w.cage_id = c.id);
+
+-- The dev account owns the pilot cage and a second one, so the dashboard shows the list of cages
+UPDATE cage SET owner_id = '00000000-0000-4000-8000-000000000001'
+WHERE code = 'cage-1' AND owner_id IS NULL;
+
+INSERT INTO cage (code, name, location, owner_id)
+VALUES ('cage-dev-2', 'Jaula del patio', 'Patio trasero', '00000000-0000-4000-8000-000000000001')
+ON CONFLICT ON CONSTRAINT uq_cage_code DO NOTHING;
+
+INSERT INTO guinea_pig (cage_id, name, mark_color)
+SELECT c.id, g.name, g.mark_color
+FROM cage c
+CROSS JOIN (VALUES ('Tofu', 'WHITE'), ('Mora', 'PURPLE')) AS g (name, mark_color)
+WHERE c.code = 'cage-dev-2'
+ON CONFLICT (cage_id, mark_color) WHERE active DO NOTHING;
