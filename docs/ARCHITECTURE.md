@@ -39,7 +39,10 @@ cuy-monitor-db/
 │   ├── V6__create_refresh_token.sql    refresh_token (session renewal)
 │   ├── V7__add_google_login_to_app_user.sql   password_hash nullable, google_subject (sign in with Google)
 │   ├── V8__add_profile_to_guinea_pig.sql      breed, coat_color, initial_weight_grams, notes
-│   └── V9__free_color_of_deleted_guinea_pig.sql  unique color only among active guinea pigs
+│   ├── V9__free_color_of_deleted_guinea_pig.sql  unique color only among active guinea pigs
+│   ├── V10__create_catalog_option.sql  catalog_option: mark colors, breeds and coat colors in the database
+│   ├── V11__add_photo_to_guinea_pig.sql   photo + photo_content_type: a guinea pig is registered by its photo
+│   └── V12__add_owner_to_cage.sql      owner_id + active: several cages per account
 ├── seeds/dev/
 │   └── R__dev_seed.sql                 repeatable, dev only: guinea pigs, test user, sample readings
 ├── docker-compose.yml                  postgres:18 + flyway (local)
@@ -119,15 +122,21 @@ volumes:
 
 Enum values must match `cuy-monitor-backend/docs/contracts/`. All timestamps are `TIMESTAMPTZ` in UTC.
 
-### `cage` — V1, V3
+### `cage` — V1, V3, V12
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `BIGSERIAL` PK | Internal id |
-| `code` | `VARCHAR(50)` NOT NULL, UNIQUE | **V3.** Public id used as `cageId` in events and URLs (`cage-1`). Pilot cage gets `cage-1` |
+| `code` | `VARCHAR(50)` NOT NULL, UNIQUE | **V3.** Public id used as `cageId` in events and URLs (`cage-1`). Pilot cage gets `cage-1`; new cages get one from the backend (`cage-<8 hex>`) |
 | `name` | `VARCHAR(100)` NOT NULL | "Jaula piloto" |
 | `location` | `VARCHAR(200)` | |
 | `created_at` | `TIMESTAMPTZ` NOT NULL default `now()` | |
+| `owner_id` | `UUID` NULL → `app_user(id)` | **V12.** The account that created the cage; only that account can see or change it. `NULL` only for a pilot cage of a database without accounts |
+| `active` | `BOOLEAN` NOT NULL default `TRUE` | **V12.** Soft delete: a removed cage keeps its events, alerts and history |
+
+Index `ix_cage_owner (owner_id) WHERE active` for "my cages".
+
+> Why V12: the product handles several cages per farmer. V12 hands the existing pilot cage to the oldest active account so whoever was already using it keeps seeing it.
 
 > Why V3: the contracts use `cageId: "cage-1"` but V1 created a numeric id. V1 can't be edited, so V3 adds `code`, fills the pilot cage and makes it `NOT NULL UNIQUE`.
 
@@ -184,24 +193,48 @@ Constraint `ck_revoked_token_expires`. Index `ix_revoked_token_expires_at (expir
 | `expires_at` | `TIMESTAMPTZ` NOT NULL, `> created_at` | 7 days; index `ix_refresh_token_expires_at` for the cleanup |
 | `revoked_at` | `TIMESTAMPTZ` NULL | Set when the token is rotated or on logout. A rotated token that shows up again means theft: the backend revokes the whole family |
 
-### `guinea_pig` — V4, V8, V9
+### `catalog_option` — V10
+
+Lists the breeder can change without touching code: the mark colors the camera tells apart, the breeds and
+the coat colors. The backend serves the active rows to the dashboard, which has no list of its own.
+
+| Column | Type | Notes |
+|---|---|---|
+| `kind` | `VARCHAR(20)` NOT NULL, `ck_catalog_option_kind` | `MARK_COLOR`, `COAT_COLOR`, `BREED`. Part of `pk_catalog_option` |
+| `code` | `VARCHAR(20)` NOT NULL, `ck_catalog_option_code` | What gets stored in `guinea_pig` and travels in the API (`RED`, `TEDDY`). Upper case, letters, digits and `_` |
+| `label` | `VARCHAR(60)` NOT NULL | What the breeder reads, in Spanish ("Rojo", "Sedoso (Silkie)") |
+| `hex` | `CHAR(7)` NULL, `ck_catalog_option_hex` | Color of the dot the dashboard paints (`#d62828`). `NULL` for a breed, which has no sample |
+| `sort_order` | `SMALLINT` NOT NULL | Order on screen; index `ix_catalog_option_kind_sort` |
+| `active` | `BOOLEAN` NOT NULL default `true` | `false` hides it from new registrations and keeps the guinea pigs that already use it |
+
+Adding a color is one `INSERT`; renaming one is an `UPDATE` of `label`. Retiring one is `active = false`, never a
+`DELETE`, so the guinea pigs wearing it keep a readable value.
+
+### `guinea_pig` — V4, V8, V9, V10, V11
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | `BIGSERIAL` PK | |
 | `cage_id` | `BIGINT` NOT NULL → `cage(id)` | |
-| `name` | `VARCHAR(100)` NOT NULL, `ck_guinea_pig_name` | Not blank |
-| `mark_color` | `VARCHAR(20)` NOT NULL, CHECK | `RED, BLUE, GREEN, YELLOW, ORANGE, PURPLE, BLACK, WHITE` |
+| `name` | `VARCHAR(100)` NULL (V11) | **Replaced by `photo`.** The backend no longer reads or writes it; a later migration drops the column |
+| `mark_color` | `VARCHAR(20)` NOT NULL | A `MARK_COLOR` code of `catalog_option` (V10 dropped the CHECK that repeated the list) |
 | `current_status` | `VARCHAR(20)` NOT NULL default `NORMAL`, CHECK | `NORMAL, OBSERVED, ALERT, CRITICAL` |
 | `status_since` | `TIMESTAMPTZ` NOT NULL default `now()` | When `current_status` last changed (`statusSince` in the REST API) |
 | `active` | `BOOLEAN` NOT NULL default `true` | Soft delete |
 | `created_at` | `TIMESTAMPTZ` NOT NULL default `now()` | |
-| `breed` | `VARCHAR(20)` NULL, `ck_guinea_pig_breed` (V8) | `AMERICAN, PERUVIAN, ABYSSINIAN, TEDDY, SILKIE, SKINNY, CRESTED, OTHER` |
-| `coat_color` | `VARCHAR(20)` NULL, `ck_guinea_pig_coat_color` (V8) | `WHITE, BLACK, BROWN, CREAM, GRAY, CINNAMON, BICOLOR, TRICOLOR` |
+| `breed` | `VARCHAR(20)` NULL (V8) | A `BREED` code of `catalog_option` (V10 dropped the CHECK) |
+| `coat_color` | `VARCHAR(20)` NULL (V8) | A `COAT_COLOR` code of `catalog_option` (V10 dropped the CHECK) |
 | `initial_weight_grams` | `INTEGER` NULL, `ck_guinea_pig_initial_weight_grams` (V8) | Weight on arrival, 50 to 2000 g |
 | `notes` | `VARCHAR(500)` NULL (V8) | Free text: character, allergies, history |
+| `photo` | `BYTEA` NULL, `ck_guinea_pig_photo_size` (V11) | How the breeder recognizes the cuy, instead of a name. 1 byte to 300 KB; the dashboard shrinks the picture before sending it |
+| `photo_content_type` | `VARCHAR(30)` NULL, `ck_guinea_pig_photo_content_type` (V11) | `image/jpeg`, `image/png` or `image/webp`. Null exactly when `photo` is null (`ck_guinea_pig_photo`) |
 
-The four V8 columns are optional: guinea pigs registered before it keep `NULL`.
+The four V8 columns are optional: guinea pigs registered before it keep `NULL`. The photo is required by the
+REST API when registering, but the column is nullable so the cuyes registered before V11 stay readable.
+
+There is no foreign key to `catalog_option`: its primary key is `(kind, code)`, so a real FK would need a
+constant `kind` column on `guinea_pig` for each of the three references. The backend rejects a code that is
+not an active row instead.
 
 `uq_guinea_pig_cage_color` (V9): a **partial unique index** on `(cage_id, mark_color) WHERE active`. One color per active guinea pig in a cage; deleting a guinea pig is a soft delete (`active = false`), keeps its history and frees its color.
 
@@ -294,7 +327,8 @@ cage 1 ──< guinea_pig 1 ──< state_transition
   ├──< alert
   └──< weight_reading
 
-app_user 1 ──< otp_challenge          (not linked to cage: every user sees the pilot cage)
+app_user 1 ──< cage                   (owner_id, V12: each account sees only its own cages)
+app_user 1 ──< otp_challenge
 app_user 1 ──< refresh_token          (family_id groups the rotations of one login)
 revoked_token                         (standalone: jti of logged-out JWTs)
 ```

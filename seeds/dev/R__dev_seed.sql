@@ -1,22 +1,56 @@
 -- Development data only. This location is never copied into the migrate image, so it can't reach RDS.
 -- Repeatable migration: Flyway runs it again whenever this file changes, so every insert must be idempotent.
 
--- One guinea pig per mark color in the pilot cage
-INSERT INTO guinea_pig (cage_id, name, mark_color)
-SELECT c.id, g.name, g.mark_color
+-- One guinea pig per mark color in the pilot cage. A cuy is identified by its photo, so each one gets a
+-- 64x64 PNG of its own mark color: enough for the dashboard to show something real without carrying
+-- pictures of animals in the repo.
+INSERT INTO guinea_pig (cage_id, mark_color, photo, photo_content_type)
+SELECT c.id, g.mark_color, decode(g.photo, 'base64'), 'image/png'
 FROM cage c
 CROSS JOIN (VALUES
-    ('Canela', 'RED'),
-    ('Azulito', 'BLUE'),
-    ('Menta', 'GREEN'),
-    ('Mostaza', 'YELLOW'),
-    ('Naranjo', 'ORANGE'),
-    ('Lila', 'PURPLE'),
-    ('Carbón', 'BLACK'),
-    ('Nieve', 'WHITE')
-) AS g (name, mark_color)
+    ('RED',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAT0lEQVR42u3PQQkAAAgEsItz/cOYxwi+hcEKLNO+FgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGBK7AL32EPoqXGuwAAAABJRU5ErkJggg=='),
+    ('BLUE',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAUElEQVR42u3PQQkAAAgEsEtiOTubxwi+hcEKLNXzWgQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQErsAC/wBxPM8TsEEAAAAASUVORK5CYII='),
+    ('GREEN',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAUElEQVR42u3PQQkAAAgEsEtkCnOa1Qi+hcEKLDX9WgQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQErsAC2WoBAJ/efOIAAAAASUVORK5CYII='),
+    ('YELLOW',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAUElEQVR42u3PQQkAAAgEsIth/y5G8m8E38JgBZbpei0CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICApcFLxUhtByKRpcAAAAASUVORK5CYII='),
+    ('ORANGE',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAATklEQVR42u3PMQ0AAAgDsDlHNu8kcJM0qYFmJ69FQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQOAKFK3kYVoRAP85AAAAAElFTkSuQmCC'),
+    ('PURPLE',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAUElEQVR42u3PQQkAAAgEsGtmMHPZzwi+hcEKLF3zWgQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQErsAC/mbxSyPAZz4AAAAASUVORK5CYII='),
+    ('BLACK',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAATElEQVR42u3PMQ0AAAwDoOqof6GVsHsJOCB9LgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICV2AUzeA9WjNPSAAAAABJRU5ErkJggg=='),
+    ('WHITE',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAS0lEQVR42u3PMQ0AAAwDoPo33UrYvQQckD4XAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAYErMMpT0sKrUBQAAAAAAElFTkSuQmCC')
+) AS g (mark_color, photo)
 WHERE c.code = 'cage-1'
 ON CONFLICT (cage_id, mark_color) WHERE active DO NOTHING;
+
+-- Gives a photo to the cuyes seeded before the photo existed, so an old local database does not need a wipe
+UPDATE guinea_pig g
+SET photo = decode(v.photo, 'base64'), photo_content_type = 'image/png'
+FROM (VALUES
+    ('RED',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAT0lEQVR42u3PQQkAAAgEsItz/cOYxwi+hcEKLNO+FgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGBK7AL32EPoqXGuwAAAABJRU5ErkJggg=='),
+    ('BLUE',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAUElEQVR42u3PQQkAAAgEsEtiOTubxwi+hcEKLNXzWgQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQErsAC/wBxPM8TsEEAAAAASUVORK5CYII='),
+    ('GREEN',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAUElEQVR42u3PQQkAAAgEsEtkCnOa1Qi+hcEKLDX9WgQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQErsAC2WoBAJ/efOIAAAAASUVORK5CYII='),
+    ('YELLOW',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAUElEQVR42u3PQQkAAAgEsIth/y5G8m8E38JgBZbpei0CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICApcFLxUhtByKRpcAAAAASUVORK5CYII='),
+    ('ORANGE',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAATklEQVR42u3PMQ0AAAgDsDlHNu8kcJM0qYFmJ69FQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQOAKFK3kYVoRAP85AAAAAElFTkSuQmCC'),
+    ('PURPLE',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAUElEQVR42u3PQQkAAAgEsGtmMHPZzwi+hcEKLF3zWgQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQErsAC/mbxSyPAZz4AAAAASUVORK5CYII='),
+    ('BLACK',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAATElEQVR42u3PMQ0AAAwDoOqof6GVsHsJOCB9LgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICV2AUzeA9WjNPSAAAAABJRU5ErkJggg=='),
+    ('WHITE',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAS0lEQVR42u3PMQ0AAAwDoPo33UrYvQQckD4XAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAYErMMpT0sKrUBQAAAAAAElFTkSuQmCC')
+) AS v (mark_color, photo)
+WHERE g.photo IS NULL AND g.mark_color = v.mark_color
+  AND g.cage_id = (SELECT id FROM cage WHERE code = 'cage-1');
 
 -- Test account dev / dev-password, already ACTIVE so it can log in right away (the OTP still goes to the log
 -- with the backend's dev profile). The hash was made with the backend's BCryptPasswordHasher. Never a real user.
@@ -66,3 +100,21 @@ CROSS JOIN (VALUES
 ) AS r (grams, ago)
 WHERE c.code = 'cage-1'
   AND NOT EXISTS (SELECT 1 FROM weight_reading w WHERE w.cage_id = c.id);
+
+-- The dev account owns the pilot cage and a second one, so the dashboard shows the list of cages
+UPDATE cage SET owner_id = '00000000-0000-4000-8000-000000000001'
+WHERE code = 'cage-1' AND owner_id IS NULL;
+
+INSERT INTO cage (code, name, location, owner_id)
+VALUES ('cage-dev-2', 'Jaula del patio', 'Patio trasero', '00000000-0000-4000-8000-000000000001')
+ON CONFLICT ON CONSTRAINT uq_cage_code DO NOTHING;
+
+-- two cuyes there, identified by the same sample photo of their mark color as in the pilot cage
+INSERT INTO guinea_pig (cage_id, mark_color, photo, photo_content_type)
+SELECT c.id, sample.mark_color, sample.photo, sample.photo_content_type
+FROM cage c
+JOIN guinea_pig sample
+  ON sample.cage_id = (SELECT id FROM cage WHERE code = 'cage-1') AND sample.active
+ AND sample.mark_color IN ('WHITE', 'PURPLE')
+WHERE c.code = 'cage-dev-2'
+ON CONFLICT (cage_id, mark_color) WHERE active DO NOTHING;

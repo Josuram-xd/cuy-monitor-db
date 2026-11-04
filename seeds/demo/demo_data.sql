@@ -8,19 +8,24 @@
 --   event       source = 'demo-seed'
 --   alert       the cage-level ones by their exact message; the cuy ones by their guinea pig
 -- Mark colors GREEN, BLUE, WHITE and ORANGE; a color already worn by another cuy is skipped, not overwritten.
+-- A cuy has no name any more: here it is told apart by its mark color, and its photo is a 64x64 PNG of it.
 
 -- 1. Four cuyes, with their profile and current status ---------------------------------------------------
-INSERT INTO guinea_pig (cage_id, name, mark_color, current_status, status_since, breed, coat_color,
-                        initial_weight_grams, notes, created_at)
-SELECT c.id, v.name, v.mark_color, v.status, now() - v.since, v.breed, v.coat, v.grams, v.notes,
-       now() - interval '3 days'
+INSERT INTO guinea_pig (cage_id, mark_color, current_status, status_since, breed, coat_color,
+                        initial_weight_grams, notes, photo, photo_content_type, created_at)
+SELECT c.id, v.mark_color, v.status, now() - v.since, v.breed, v.coat, v.grams, v.notes,
+       decode(v.photo, 'base64'), 'image/png', now() - interval '3 days'
 FROM cage c
 CROSS JOIN (VALUES
-    ('Canela', 'GREEN',  'OBSERVED', interval '22 minutes', 'TEDDY',      'CINNAMON', 860, '[demo] La más curiosa de la jaula.'),
-    ('Pelusa', 'BLUE',   'NORMAL',   interval '10 hours',   'PERUVIAN',   'CREAM',    940, '[demo] Le encanta el pasto fresco.'),
-    ('Copito', 'WHITE',  'NORMAL',   interval '24 hours',   'AMERICAN',   'WHITE',    780, '[demo] Tranquilo, duerme mucho.'),
-    ('Chispa', 'ORANGE', 'ALERT',    interval '35 minutes', 'ABYSSINIAN', 'BICOLOR',  820, '[demo] Muy activa, suele ser la primera en el comedero.')
-) AS v (name, mark_color, status, since, breed, coat, grams, notes)
+    ('GREEN',  'OBSERVED', interval '22 minutes', 'TEDDY',      'CINNAMON', 860, '[demo] El más curioso de la jaula.',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAUElEQVR42u3PQQkAAAgEsEtkCnOa1Qi+hcEKLDX9WgQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQErsAC2WoBAJ/efOIAAAAASUVORK5CYII='),
+    ('BLUE',   'NORMAL',   interval '10 hours',   'PERUVIAN',   'CREAM',    940, '[demo] Le encanta el pasto fresco.',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAUElEQVR42u3PQQkAAAgEsEtiOTubxwi+hcEKLNXzWgQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQErsAC/wBxPM8TsEEAAAAASUVORK5CYII='),
+    ('WHITE',  'NORMAL',   interval '24 hours',   'AMERICAN',   'WHITE',    780, '[demo] Tranquilo, duerme mucho.',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAS0lEQVR42u3PMQ0AAAwDoPo33UrYvQQckD4XAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAYErMMpT0sKrUBQAAAAAAElFTkSuQmCC'),
+    ('ORANGE', 'ALERT',    interval '35 minutes', 'ABYSSINIAN', 'BICOLOR',  820, '[demo] Muy activo, suele ser el primero en el comedero.',
+     'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAATklEQVR42u3PMQ0AAAgDsDlHNu8kcJM0qYFmJ69FQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQOAKFK3kYVoRAP85AAAAAElFTkSuQmCC')
+) AS v (mark_color, status, since, breed, coat, grams, notes, photo)
 WHERE c.code = 'cage-1'
 ON CONFLICT (cage_id, mark_color) WHERE active DO NOTHING;
 
@@ -28,31 +33,31 @@ ON CONFLICT (cage_id, mark_color) WHERE active DO NOTHING;
 INSERT INTO baseline_profile (guinea_pig_id, avg_still_seconds, avg_feeder_visits, avg_group_distance, updated_at)
 SELECT g.id, v.still, v.feeder, v.distance, now() - interval '1 hour'
 FROM guinea_pig g
-JOIN (VALUES ('Canela', 14.0, 2.1, 0.22), ('Pelusa', 18.0, 1.6, 0.27),
-             ('Copito', 26.0, 1.2, 0.31), ('Chispa', 9.0, 2.8, 0.18)) AS v (name, still, feeder, distance)
-  ON v.name = g.name
+JOIN (VALUES ('GREEN', 14.0, 2.1, 0.22), ('BLUE', 18.0, 1.6, 0.27),
+             ('WHITE', 26.0, 1.2, 0.31), ('ORANGE', 9.0, 2.8, 0.18)) AS v (mark_color, still, feeder, distance)
+  ON v.mark_color = g.mark_color
 WHERE g.notes LIKE '[demo]%'
 ON CONFLICT ON CONSTRAINT pk_baseline_profile DO NOTHING;
 
 -- 3. Behavior windows: one per minute for the last 20 minutes, per cuy --------------------------------------
--- Canela and Chispa drift away from their normal; Pelusa and Copito stay close to it.
+-- The green and orange cuyes drift away from their normal; the blue and white ones stay close to it.
 INSERT INTO event (id, type, cage_id, guinea_pig_id, source, occurred_at, payload)
 SELECT md5('demo-behavior-' || g.id || '-' || i)::uuid, 'BEHAVIOR', g.cage_id, g.id, 'demo-seed',
        now() - make_interval(mins => i),
        jsonb_build_object(
            'color', g.mark_color,
            'windowSeconds', 60,
-           'stillSeconds', CASE g.name WHEN 'Chispa' THEN 50 + (i * 3) % 9
-                                       WHEN 'Canela' THEN 32 + (i * 5) % 9
-                                       WHEN 'Copito' THEN 24 + (i * 7) % 8
-                                       ELSE 16 + (i * 4) % 7 END,
-           'feederVisits', CASE g.name WHEN 'Chispa' THEN 0
-                                       WHEN 'Canela' THEN (i % 3) / 2
-                                       ELSE 1 + i % 2 END,
+           'stillSeconds', CASE g.mark_color WHEN 'ORANGE' THEN 50 + (i * 3) % 9
+                                             WHEN 'GREEN'  THEN 32 + (i * 5) % 9
+                                             WHEN 'WHITE'  THEN 24 + (i * 7) % 8
+                                             ELSE 16 + (i * 4) % 7 END,
+           'feederVisits', CASE g.mark_color WHEN 'ORANGE' THEN 0
+                                             WHEN 'GREEN'  THEN (i % 3) / 2
+                                             ELSE 1 + i % 2 END,
            'watererVisits', i % 2,
-           'avgGroupDistance', round((CASE g.name WHEN 'Chispa' THEN 0.55 WHEN 'Canela' THEN 0.40 ELSE 0.25 END
+           'avgGroupDistance', round((CASE g.mark_color WHEN 'ORANGE' THEN 0.55 WHEN 'GREEN' THEN 0.40 ELSE 0.25 END
                                       + (i % 4) * 0.01)::numeric, 2),
-           'probAnomaly', round((CASE g.name WHEN 'Chispa' THEN 0.86 WHEN 'Canela' THEN 0.58 ELSE 0.07 END
+           'probAnomaly', round((CASE g.mark_color WHEN 'ORANGE' THEN 0.86 WHEN 'GREEN' THEN 0.58 ELSE 0.07 END
                                  + (i % 5) * 0.01)::numeric, 2),
            'detectionConfidence', round((0.90 + (i % 6) * 0.01)::numeric, 2))
 FROM guinea_pig g
@@ -94,13 +99,13 @@ INSERT INTO state_transition (guinea_pig_id, from_status, to_status, reason, occ
 SELECT g.id, v.from_status, v.to_status, v.reason, now() - v.ago
 FROM guinea_pig g
 JOIN (VALUES
-    ('Canela', 'NORMAL',   'OBSERVED', 'Menos visitas al comedero que su promedio',     interval '22 minutes'),
-    ('Chispa', 'NORMAL',   'OBSERVED', 'Pasa más tiempo quieta que su promedio',        interval '70 minutes'),
-    ('Chispa', 'OBSERVED', 'ALERT',    'Lleva mucho más tiempo quieta de lo normal',    interval '35 minutes'),
-    ('Copito', 'OBSERVED', 'NORMAL',   'Volvió a su comportamiento habitual',           interval '26 hours'),
-    ('Pelusa', 'ALERT',    'OBSERVED', 'Mejoró: ya se mueve y come',                    interval '11 hours'),
-    ('Pelusa', 'OBSERVED', 'NORMAL',   'Volvió a su comportamiento habitual',           interval '10 hours')
-) AS v (name, from_status, to_status, reason, ago) ON v.name = g.name
+    ('GREEN',  'NORMAL',   'OBSERVED', 'Menos visitas al comedero que su promedio',     interval '22 minutes'),
+    ('ORANGE', 'NORMAL',   'OBSERVED', 'Pasa más tiempo quieto que su promedio',        interval '70 minutes'),
+    ('ORANGE', 'OBSERVED', 'ALERT',    'Lleva mucho más tiempo quieto de lo normal',    interval '35 minutes'),
+    ('WHITE',  'OBSERVED', 'NORMAL',   'Volvió a su comportamiento habitual',           interval '26 hours'),
+    ('BLUE',   'ALERT',    'OBSERVED', 'Mejoró: ya se mueve y come',                    interval '11 hours'),
+    ('BLUE',   'OBSERVED', 'NORMAL',   'Volvió a su comportamiento habitual',           interval '10 hours')
+) AS v (mark_color, from_status, to_status, reason, ago) ON v.mark_color = g.mark_color
 WHERE g.notes LIKE '[demo]%'
   AND NOT EXISTS (SELECT 1 FROM state_transition t
                   WHERE t.guinea_pig_id = g.id AND t.to_status = v.to_status AND t.reason = v.reason);
@@ -111,13 +116,13 @@ SELECT c.id, g.id, v.level, v.type, v.message, v.status, now() - v.ago,
        CASE v.status WHEN 'REVIEWED' THEN now() - v.ago + interval '40 minutes' END
 FROM cage c
 JOIN (VALUES
-    ('Chispa', 'ALERT', 'BEHAVIOR', 'Chispa lleva mucho más tiempo quieta de lo normal',    'OPEN',     interval '35 minutes'),
-    ('Canela', 'ALERT', 'BEHAVIOR', 'Canela casi no ha ido al comedero en la última hora',   'REVIEWED', interval '3 hours'),
+    ('ORANGE', 'ALERT', 'BEHAVIOR', 'El cuy de marca naranja lleva mucho más tiempo quieto de lo normal', 'OPEN',     interval '35 minutes'),
+    ('GREEN',  'ALERT', 'BEHAVIOR', 'El cuy de marca verde casi no ha ido al comedero en la última hora',  'REVIEWED', interval '3 hours'),
     (NULL,     'ALERT', 'AUDIO',    'Se escucharon chillidos de angustia en la jaula',        'OPEN',     interval '30 minutes'),
     (NULL,     'ALERT', 'WEIGHT',   'El peso de la jaula bajó casi 270 g en la última hora',  'OPEN',     interval '12 minutes'),
     (NULL,     'ALERT', 'AUDIO',    'Ruido fuerte y repentino cerca de la jaula',             'REVIEWED', interval '1 day')
 ) AS v (pig, level, type, message, status, ago) ON true
-LEFT JOIN guinea_pig g ON g.cage_id = c.id AND g.name = v.pig AND g.notes LIKE '[demo]%'
+LEFT JOIN guinea_pig g ON g.cage_id = c.id AND g.mark_color = v.pig AND g.notes LIKE '[demo]%'
 WHERE c.code = 'cage-1'
   AND (v.pig IS NULL OR g.id IS NOT NULL)
   AND NOT EXISTS (SELECT 1 FROM alert a WHERE a.cage_id = c.id AND a.message = v.message);
