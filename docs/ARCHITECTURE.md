@@ -42,7 +42,8 @@ cuy-monitor-db/
 │   ├── V9__free_color_of_deleted_guinea_pig.sql  unique color only among active guinea pigs
 │   ├── V10__create_catalog_option.sql  catalog_option: mark colors, breeds and coat colors in the database
 │   ├── V11__add_photo_to_guinea_pig.sql   photo + photo_content_type: a guinea pig is registered by its photo
-│   └── V12__add_owner_to_cage.sql      owner_id + active: several cages per account
+│   ├── V12__add_owner_to_cage.sql      owner_id + active: several cages per account
+│   └── V13__add_sample_count_to_baseline_profile.sql   how many windows the normal profile was learned from
 ├── seeds/dev/
 │   └── R__dev_seed.sql                 repeatable, dev only: guinea pigs, test user, sample readings
 ├── docker-compose.yml                  postgres:18 + flyway (local)
@@ -299,7 +300,7 @@ Indexes `ix_alert_status_created (status, created_at DESC)` for `GET /api/v1/ale
 
 Index `ix_weight_reading_cage_measured (cage_id, measured_at DESC)`.
 
-### `baseline_profile` — V4
+### `baseline_profile` — V4, V13
 
 | Column | Type | Notes |
 |---|---|---|
@@ -308,6 +309,7 @@ Index `ix_weight_reading_cage_measured (cage_id, measured_at DESC)`.
 | `avg_feeder_visits` | `NUMERIC(6,2)` NOT NULL | |
 | `avg_group_distance` | `NUMERIC(5,4)` NOT NULL, CHECK 0–1 | |
 | `updated_at` | `TIMESTAMPTZ` NOT NULL | |
+| `sample_count` | `INT` NOT NULL default `0`, CHECK ≥ 0 | **V13.** How many normal windows the profile was learned from (backend Task 11.1): a plain average while it has few, then a slow moving average. The backend uses the default profile until it has enough |
 
 V4 was checked against the backend domain model (backend Task 4.5: `GuineaPig`, `HealthEvent`, `StateTransition`, `Alert`, `WeightReading`, `BaselineProfile`). Once merged, changes go in V5+.
 

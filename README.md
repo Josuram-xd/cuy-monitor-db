@@ -9,7 +9,7 @@ Esquema de PostgreSQL del Monitor de Salud de Cuyes. Las migraciones **Flyway** 
 | **Tablas de negocio** | **12** |
 | Tabla técnica de Flyway (`flyway_schema_history`) | 1 (13 tablas en total en PostgreSQL) |
 | Relaciones (claves foráneas) | **11** |
-| Migraciones | **12** (`V1` a `V12`) |
+| Migraciones | **13** (`V1` a `V13`) |
 | Motor | PostgreSQL 18 (Amazon RDS en producción) |
 
 Las 11 tablas se reparten en dos áreas: **usuarios y sesión** (4) y **jaula y salud** (7).
@@ -164,7 +164,7 @@ erDiagram
 | `state_transition` | V4 | Historial de cambios de estado de cada cuy (`NORMAL`, `OBSERVED`, `ALERT`, `CRITICAL`) y su motivo |
 | `alert` | V4 | Alertas abiertas o revisadas; pueden ser de un cuy o de toda la jaula (`guinea_pig_id` nulo) |
 | `weight_reading` | V4 | Lecturas de la báscula de la jaula |
-| `baseline_profile` | V4 | Línea base de comportamiento de cada cuy (quietud, visitas al comedero, distancia al grupo), 1 a 1 con `guinea_pig` |
+| `baseline_profile` | V4, V13 | Lo normal de cada cuy (quietud, visitas al comedero, distancia al grupo), aprendido de sus propias ventanas normales; `sample_count` dice de cuántas. 1 a 1 con `guinea_pig` |
 
 ## Relaciones (las 11 claves foráneas)
 
@@ -202,6 +202,7 @@ Los valores permitidos de cada enumeración (`HealthStatus`, `MarkColor`, raza, 
 | V10 | `catalog_option`: colores de marca, razas y colores de pelaje salen de la base, no del código |
 | V11 | El cuy se registra con su foto en lugar de un nombre (`photo`, `photo_content_type`) |
 | V12 | Varias jaulas por cuenta: dueño (`owner_id`) y borrado lógico (`active`) de la jaula |
+| V13 | `baseline_profile.sample_count`: de cuántas ventanas se aprendió lo normal de cada cuy |
 
 Además hay un seed solo para desarrollo (`seeds/dev/R__dev_seed.sql`), que nunca se aplica en producción.
 
