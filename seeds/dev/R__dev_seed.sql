@@ -118,3 +118,32 @@ JOIN guinea_pig sample
  AND sample.mark_color IN ('WHITE', 'PURPLE')
 WHERE c.code = 'cage-dev-2'
 ON CONFLICT (cage_id, mark_color) WHERE active DO NOTHING;
+
+-- 30 days of reviewed alerts in the pilot cage, so the alert history has pages to show: behavior alerts of
+-- four cuyes, distress clips and weight drops, one every 19 hours or so, some of them critical.
+-- Only when the cage has no alert older than two days, so running it again adds nothing.
+INSERT INTO alert (cage_id, guinea_pig_id, level, type, message, status, created_at, reviewed_at)
+SELECT c.id,
+       CASE WHEN h.type = 'BEHAVIOR' THEN g.id END,
+       h.level, h.type, h.message, 'REVIEWED', h.created_at,
+       h.created_at + interval '25 minutes' + (h.n % 4) * interval '20 minutes'
+FROM cage c
+CROSS JOIN LATERAL (
+    SELECT n,
+           CASE n % 6 WHEN 0 THEN 'AUDIO' WHEN 3 THEN 'WEIGHT' ELSE 'BEHAVIOR' END AS type,
+           CASE WHEN n % 5 = 0 THEN 'CRITICAL' ELSE 'ALERT' END AS level,
+           (ARRAY['RED', 'BLUE', 'GREEN', 'YELLOW'])[n % 4 + 1] AS mark_color,
+           CASE n % 6
+               WHEN 0 THEN 'Se escucharon chillidos de angustia en la jaula'
+               WHEN 3 THEN 'El peso de la jaula bajó más de lo esperado'
+               WHEN 1 THEN 'Estuvo quieto mucho más de lo normal y no fue al comedero'
+               WHEN 2 THEN 'Se alejó del grupo durante mucho tiempo'
+               ELSE 'Su comportamiento fue anómalo varios minutos seguidos'
+           END AS message,
+           now() - n * interval '19 hours' - (n % 7) * interval '13 minutes' AS created_at
+    FROM generate_series(3, 37) AS n
+) AS h
+LEFT JOIN guinea_pig g ON g.cage_id = c.id AND g.active AND g.mark_color = h.mark_color
+WHERE c.code = 'cage-1'
+  AND (h.type <> 'BEHAVIOR' OR g.id IS NOT NULL)
+  AND NOT EXISTS (SELECT 1 FROM alert a WHERE a.cage_id = c.id AND a.created_at < now() - interval '2 days');
