@@ -102,15 +102,18 @@
 
 ### Task 8 — Respaldo y restauración
 
-- [ ] **Task 8.1** — `chore(scripts): add local backup and restore scripts`
+- [x] **Task 8.1** — `chore(scripts): add local backup and restore scripts`
+  `scripts/backup.sh` y `scripts/restore.sh` (con `postgres:18`, sin instalar nada). Probado: respaldo → restauración en otra base → mismos conteos.
   `pg_dump` / `pg_restore` de la base local.
-- [ ] **Task 8.2** — `docs: add RDS snapshot and point-in-time restore guide`
+- [x] **Task 8.2** — `docs: add RDS snapshot and point-in-time restore guide`
+  `docs/BACKUP.md`. Ojo: la RDS tiene hoy **1 día** de retención; la guía trae el comando para subirla a 7.
 - [ ] **Task 8.3** — *(sin commit)* tomar un snapshot manual de la RDS antes de la prueba en la jaula real (27 de octubre)
 
 ### Task 9 — Entrega
 
-- [ ] **Task 9.1** — `docs(schema): add final ER diagram for the report`
-- [ ] **Task 9.2** — `docs: update README with setup, migrations and RDS notes`
+- [x] **Task 9.1** — `docs(schema): add final ER diagram for the report`
+  Diagrama del README al día con V12–V14 y exportado a `docs/er-diagram.png`.
+- [x] **Task 9.2** — `docs: update README with setup, migrations and RDS notes`
 
 ### Task 10 — Integración continua
 
