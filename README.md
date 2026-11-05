@@ -9,15 +9,16 @@ Esquema de PostgreSQL del Monitor de Salud de Cuyes. Las migraciones **Flyway** 
 | **Tablas de negocio** | **12** |
 | Tabla técnica de Flyway (`flyway_schema_history`) | 1 (13 tablas en total en PostgreSQL) |
 | Relaciones (claves foráneas) | **11** |
-| Migraciones | **13** (`V1` a `V13`) |
+| Migraciones | **14** (`V1` a `V14`) |
 | Motor | PostgreSQL 18 (Amazon RDS en producción) |
 
-Las 11 tablas se reparten en dos áreas: **usuarios y sesión** (4) y **jaula y salud** (7).
+Las 12 tablas se reparten en dos áreas: **usuarios y sesión** (4) y **jaula y salud** (8).
 
 ## Diagrama de relaciones
 
 ```mermaid
 erDiagram
+    app_user |o--o{ cage : "es dueño de"
     app_user ||--o{ otp_challenge : "inicia sesión con"
     app_user ||--o{ refresh_token : "mantiene sesión con"
     cage ||--o{ guinea_pig : "tiene"
@@ -70,6 +71,8 @@ erDiagram
         varchar code UK
         varchar name
         varchar location
+        uuid owner_id FK "NULL = sin dueño, nadie la ve"
+        boolean active "borrado lógico"
         timestamptz created_at
     }
     catalog_option {
@@ -83,6 +86,7 @@ erDiagram
     guinea_pig {
         bigint id PK
         bigint cage_id FK
+        varchar name
         bytea photo
         varchar photo_content_type
         varchar mark_color "UK con cage_id"
@@ -136,13 +140,18 @@ erDiagram
         numeric avg_still_seconds
         numeric avg_feeder_visits
         numeric avg_group_distance
+        int sample_count "ventanas de las que aprendió"
         timestamptz updated_at
     }
 ```
 
+`catalog_option` no tiene claves foráneas: `guinea_pig.mark_color`, `breed` y `coat_color` guardan el **código** de
+una opción del catálogo (`RED`, `TEDDY`…) y el backend revisa que exista, así una opción retirada no borra la
+historia de los cuyes que la usaban.
+
 `revoked_token` no tiene relaciones a propósito: guarda el `jti` (y el id de sesión) de los JWT cerrados, que no pertenecen a una fila de otra tabla, y un job diario borra los vencidos. `refresh_token.family_id` agrupa los tokens de un mismo inicio de sesión (para revocarlos juntos si se reutiliza uno) y tampoco es una clave foránea.
 
-## Las 11 tablas
+## Las 12 tablas
 
 ### Usuarios y sesión
 
@@ -162,7 +171,7 @@ erDiagram
 | `guinea_pig` | V4, V8, V10, V11 | Cada cuy: su foto, color de marca (único por jaula), estado actual, y opcionalmente raza, color del pelaje, peso inicial y notas |
 | `event` | V4 | Eventos que llegan de cámara, micrófono y báscula (`BEHAVIOR`, `AUDIO`, `WEIGHT`), con el JSON original en `payload` |
 | `state_transition` | V4 | Historial de cambios de estado de cada cuy (`NORMAL`, `OBSERVED`, `ALERT`, `CRITICAL`) y su motivo |
-| `alert` | V4 | Alertas abiertas o revisadas; pueden ser de un cuy o de toda la jaula (`guinea_pig_id` nulo) |
+| `alert` | V4, V14 | Alertas abiertas o revisadas; pueden ser de un cuy o de toda la jaula (`guinea_pig_id` nulo). Se consultan en el historial por jaula o por cuy, de la más nueva a la más vieja |
 | `weight_reading` | V4 | Lecturas de la báscula de la jaula |
 | `baseline_profile` | V4, V13 | Lo normal de cada cuy (quietud, visitas al comedero, distancia al grupo), aprendido de sus propias ventanas normales; `sample_count` dice de cuántas. 1 a 1 con `guinea_pig` |
 
@@ -203,6 +212,7 @@ Los valores permitidos de cada enumeración (`HealthStatus`, `MarkColor`, raza, 
 | V11 | El cuy se registra con su foto en lugar de un nombre (`photo`, `photo_content_type`) |
 | V12 | Varias jaulas por cuenta: dueño (`owner_id`) y borrado lógico (`active`) de la jaula |
 | V13 | `baseline_profile.sample_count`: de cuántas ventanas se aprendió lo normal de cada cuy |
+| V14 | Índice `ix_alert_guinea_pig_created` para el historial de alertas de un cuy |
 
 Además hay un seed solo para desarrollo (`seeds/dev/R__dev_seed.sql`), que nunca se aplica en producción.
 
@@ -230,6 +240,26 @@ docker compose down                     # los datos quedan en el volumen (down -
 ```
 
 Conexión local: `jdbc:postgresql://localhost:5432/cuymonitor`, usuario y contraseña `cuymonitor`.
+
+La semilla de desarrollo trae la cuenta `dev` / `dev-password` (ya activa), la jaula `cage-1` con un cuy por color
+de marca, una segunda jaula, eventos, pesos y 30 días de alertas revisadas para el historial.
+
+## Producción (Amazon RDS)
+
+- **Dónde:** RDS PostgreSQL 18 (`db.t3.micro`, 20 GB, `us-east-1`), privada: solo la EC2 llega a ella, con TLS.
+- **Cómo se aplican las migraciones:** en cada despliegue (`infra/deploy.sh` del backend), Compose corre una vez
+  la imagen `migrate` de este repo (`Dockerfile`: Flyway + `migrations/`). El backend arranca solo si `migrate`
+  terminó bien. `seeds/` nunca entra en esa imagen.
+- **Respaldos:** automáticos diarios de RDS (hoy con 1 día de retención, recomendado 7), snapshots manuales antes
+  de cambios grandes y `scripts/backup.sh` / `scripts/restore.sh` para la base local. Todo en
+  [docs/BACKUP.md](docs/BACKUP.md).
+- **Ahorrar créditos:** la RDS se puede detener cuando el proyecto no se está mostrando (AWS la vuelve a encender
+  sola a los 7 días); los datos se conservan.
+
+## Diagrama para el informe
+
+[docs/er-diagram.png](docs/er-diagram.png) es el mismo diagrama de relaciones de arriba exportado a imagen,
+para pegarlo en el informe.
 
 ## Reglas
 
