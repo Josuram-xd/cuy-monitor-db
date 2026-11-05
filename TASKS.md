@@ -90,9 +90,11 @@
 
 - [ ] **Task 7.1** — `feat(schema): add V5+ migrations requested by backend tasks`
   V13 (`baseline_profile.sample_count`) para backend Task 11.1.
+  V14 (`ix_alert_guinea_pig_created`) para el historial de alertas del backend (`GET /api/v1/alerts/history`).
   Solo si las Task 10–13 del backend necesitan columnas nuevas. Una migración por cambio, con su diccionario actualizado.
 - [x] **Task 7.2** — *(sin commit)* revisar con `EXPLAIN` las consultas de historial, alertas abiertas y peso con los datos de prueba
   Revisado el 4 de noviembre con las consultas de backend Task 8.6: historial de transiciones y de ventanas, peso de la jaula y alertas abiertas usan `ix_state_transition_guinea_pig_occurred`, `ix_event_guinea_pig_occurred`, `ix_weight_reading_cage_measured` e `ix_alert_status_created`. No hizo falta ningún índice nuevo.
+  Historial de alertas (4 de noviembre, 60 000 alertas de prueba): por jaulas usa `ix_alert_cage_created`; por cuy, `ix_alert_guinea_pig_created` (V14), ya ordenado por fecha.
 
 ---
 

@@ -43,7 +43,8 @@ cuy-monitor-db/
 │   ├── V10__create_catalog_option.sql  catalog_option: mark colors, breeds and coat colors in the database
 │   ├── V11__add_photo_to_guinea_pig.sql   photo + photo_content_type: a guinea pig is registered by its photo
 │   ├── V12__add_owner_to_cage.sql      owner_id + active: several cages per account
-│   └── V13__add_sample_count_to_baseline_profile.sql   how many windows the normal profile was learned from
+│   ├── V13__add_sample_count_to_baseline_profile.sql   how many windows the normal profile was learned from
+│   └── V14__index_alert_history_by_guinea_pig.sql      the alert history of one guinea pig
 ├── seeds/dev/
 │   └── R__dev_seed.sql                 repeatable, dev only: guinea pigs, test user, sample readings
 ├── docker-compose.yml                  postgres:18 + flyway (local)
@@ -286,7 +287,7 @@ Index `ix_state_transition_guinea_pig_occurred (guinea_pig_id, occurred_at DESC)
 
 `ck_alert_guinea_pig_scope`: `guinea_pig_id` is set only for `BEHAVIOR` alerts. `ck_alert_reviewed_at`: `reviewed_at` is set if and only if `status = 'REVIEWED'`.
 
-Indexes `ix_alert_status_created (status, created_at DESC)` for `GET /api/v1/alerts?status=OPEN` and `ix_alert_cage_created (cage_id, created_at DESC)`.
+Indexes `ix_alert_status_created (status, created_at DESC)` for `GET /api/v1/alerts?status=OPEN`, `ix_alert_cage_created (cage_id, created_at DESC)` for the alert history of one or more cages, and `ix_alert_guinea_pig_created (guinea_pig_id, created_at DESC) WHERE guinea_pig_id IS NOT NULL` (V14) for the history of one guinea pig (`GET /api/v1/alerts/history`).
 
 ### `weight_reading` — V4
 
