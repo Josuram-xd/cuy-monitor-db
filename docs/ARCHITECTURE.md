@@ -356,10 +356,10 @@ revoked_token                         (standalone: jti of logged-out JWTs)
 
 0. For risky changes (new `NOT NULL`, type changes, big data updates): take a manual RDS snapshot first.
 1. Merge the migration to `main` of this repo (and the matching backend change, if any).
-2. On the EC2: `git -C ~/cuy/cuy-monitor-db pull`.
-3. From `cuy-monitor-backend/infra`: `docker compose up -d --build migrate backend`.
-4. Check `docker compose logs migrate` and `/actuator/health`.
-5. If `migrate` fails, the new backend doesn't start (`service_completed_successfully`). Fix it with a new migration (V{n+1}); restore the snapshot only if data was damaged.
+2. On the EC2 run `~/cuy-monitor-backend/infra/deploy.sh`: it resets the 4 repos (side by side in `/home/admin`) to
+   `origin/main` and runs `docker compose up -d --build`, so `migrate` runs before the backend.
+3. Check `docker compose logs migrate` and `/actuator/health`. Step by step, with the real output: `docs/RUNBOOK.md`.
+4. If `migrate` fails, the new backend doesn't start (`service_completed_successfully`). Fix it with a new migration (V{n+1}); restore the snapshot only if data was damaged.
 
 ---
 
