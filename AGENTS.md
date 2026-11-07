@@ -71,9 +71,9 @@ Antes de decir que terminaste:
 2. `docker compose run --rm flyway validate` pasa.
 3. Si el cambio afecta al backend: `./mvnw test` en `cuy-monitor-backend` sigue pasando (sus tests de integración leen `../cuy-monitor-db/migrations`).
 
-## Git (lo hacen las personas, no el agente)
+## Git
 
-- Los commits, push y PRs los hace **una persona del equipo** a mano. El agente solo puede proponer el mensaje.
+- El agente puede crear ramas, hacer commit, push y abrir PRs cuando se lo piden. Nunca fusiona a `main` por su cuenta.
 - Sin `Co-Authored-By` ni firmas de IA en ningún commit o PR.
 - Conventional Commits en inglés: `feat(schema): add weight_reading table`, `fix(schema): add missing index on alert status`, `chore(seeds): add dev guinea pigs`, `docs(schema): update data dictionary`.
 - Ramas `feature/...`, `fix/...`. `main` solo por Pull Request, revisado por el otro integrante.
@@ -94,4 +94,4 @@ Antes de decir que terminaste:
 - Leer y editar archivos del repo.
 - `docker compose` de este repo (base local) y `docker build`.
 - `psql` contra `localhost:5432`.
-- Solo lectura de git: `git status`, `git diff`, `git log`, `git show`. **Nada de commits, push ni PRs** (ver la regla absoluta del inicio).
+- Git: ramas `feature/...`, commits y PRs (sección Git). Nunca `push --force` a `main`.

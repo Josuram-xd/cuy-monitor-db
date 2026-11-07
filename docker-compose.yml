@@ -25,10 +25,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # ":z" relabels the folders for SELinux (Fedora, RHEL): without it Flyway can't read them ("not readable")
+    # and stops with "Detected applied migration not resolved locally". Ignored where SELinux is off.
     volumes:
-      - ./migrations:/flyway/sql/migrations:ro
-      - ./seeds/dev:/flyway/sql/seeds:ro
-      - ./flyway.conf:/flyway/conf/flyway.conf:ro
+      - ./migrations:/flyway/sql/migrations:ro,z
+      - ./seeds/dev:/flyway/sql/seeds:ro,z
+      - ./flyway.conf:/flyway/conf/flyway.conf:ro,z
     # connection in env vars, not in "command", so "docker compose run --rm flyway info|validate" keeps it
     environment:
       FLYWAY_URL: jdbc:postgresql://postgres:5432/cuymonitor

@@ -67,8 +67,10 @@
 🔗 **Depende de:** Task 4 · `cuy-monitor-backend` Task 22.1 (RDS creada) y 22.4
 
 - [ ] **Task 5.1** — *(sin commit)* crear en la RDS el usuario `cuymonitor` dueño de la base `cuymonitor` (con el usuario maestro, desde la EC2)
-- [ ] **Task 5.2** — *(sin commit)* clonar el repo al lado del backend en la EC2 y correr el despliegue; revisar `docker compose logs migrate`
-- [ ] **Task 5.3** — `docs: add production migration runbook`
+- [x] **Task 5.2** — *(sin commit)* clonar el repo al lado del backend en la EC2 y correr el despliegue; revisar `docker compose logs migrate`
+  Desplegado el 2026-11-06 con `infra/deploy.sh` del backend: `migrate` aplicó V13 y V14 en la RDS (versión 12 → 14).
+- [x] **Task 5.3** — `docs: add production migration runbook`
+  `docs/RUNBOOK.md` con el procedimiento real y su salida; sin capturas de la consola (el despliegue se hizo por SSM).
   Pasos de la sección 6 de `docs/ARCHITECTURE.md`, con capturas de la consola de RDS (sin datos sensibles).
 
 ---
