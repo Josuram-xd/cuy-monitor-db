@@ -35,7 +35,9 @@
   Copiar `cuy-monitor-backend/src/main/resources/db/migration/V1__initial_schema.sql` **sin cambiar ni un byte** (mismo checksum).
 - [x] **Task 2.2** — `feat(schema): move V2 app_user and otp_challenge from the backend`
   Igual que la anterior, con `V2__create_app_user_and_otp_challenge.sql`.
-- [ ] **Task 2.3** — *(sin commit)* `docker compose up -d` desde cero y `flyway validate` sin errores
+- [x] **Task 2.3** — *(sin commit)* `docker compose up -d` desde cero y `flyway validate` sin errores
+  Verificado el 2026-11-12: `docker compose down -v && docker compose up -d` aplica V1→V14 y el seed repetible sin errores,
+  `flyway validate` valida 15 migraciones y el seed corrido dos veces deja los mismos conteos (es idempotente).
 
 🔓 **Desbloquea:** `cuy-monitor-backend` Task 21 (borrar las migraciones de allá y apagar Flyway)
 
@@ -48,7 +50,11 @@
 - [x] **Task 3.2** — `feat(schema): add V4 health tables`
   `guinea_pig`, `event`, `state_transition`, `alert`, `weight_reading`, `baseline_profile` con sus FK, `CHECK` de enums, `uq_guinea_pig_cage_color` e índices de la sección 4 de `docs/ARCHITECTURE.md`.
 - [x] **Task 3.3** — `docs(schema): update data dictionary and ER diagram`
-- [ ] **Task 3.4** — *(sin commit)* probar a mano en `psql`: `event.id` repetido, color repetido en la jaula y valor de enum inválido tienen que fallar
+- [x] **Task 3.4** — *(sin commit)* probar a mano en `psql`: `event.id` repetido, color repetido en la jaula y valor de enum inválido tienen que fallar
+  Probado el 2026-11-12: `event.id` repetido lo rechaza `pk_event`, el color repetido en la jaula `uq_guinea_pig_cage_color`,
+  un `current_status` inválido `ck_guinea_pig_current_status` y una jaula inexistente `fk_guinea_pig_cage`.
+  Ojo: `mark_color`, `breed` y `coat_color` ya **no** los valida la base — V10 borró sus `CHECK` a propósito al pasar
+  las listas a `catalog_option`, y ahora solo el backend rechaza un código inválido.
 
 🔓 **Desbloquea:** `cuy-monitor-backend` Task 4.6–4.8 (entidades JPA y adaptadores de salud)
 
