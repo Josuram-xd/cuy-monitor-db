@@ -230,6 +230,27 @@ Además hay un seed solo para desarrollo (`seeds/dev/R__dev_seed.sql`), que nunc
 | `scripts/` | Entrada de la imagen de migración |
 | `docs/` | `PRD.md`, `ARCHITECTURE.md` (diccionario de datos) |
 
+## Decisiones de diseño
+
+Aquí no hay patrones GoF: esto es SQL. Lo que sí hay son decisiones de modelado que sostienen los patrones de los
+otros repos, y conviene saber cuáles son y por qué.
+
+| Decisión | Dónde | Por qué |
+|---|---|---|
+| **Tabla de catálogo** en vez de valores quemados | `catalog_option` (V10) | Colores de marca, razas y colores de pelaje viven en la base con su etiqueta y su hex. Cambiar «Rojo» por «Rojo carmesí» es un `UPDATE`, no un despliegue del frontend |
+| **Enums como `VARCHAR` + `CHECK`** | `health_status`, `event_type`, `alert_status` | `CREATE TYPE ... AS ENUM` es caro de migrar en Postgres. Un `CHECK` se cambia con un `ALTER` |
+| **Borrado suave** | `guinea_pig.active`, `cage.active` (V12) | Un cuy o una jaula que se quitan conservan sus eventos, alertas e historial |
+| **Índice único parcial** | `uq_guinea_pig_cage_color ... WHERE active` (V9) | Dos cuyes activos no pueden compartir color en la misma jaula, pero el color de uno dado de baja queda libre otra vez |
+| **Migraciones inmutables** | `migrations/` | Flyway guarda el checksum de cada una. Una migración en `main` no se edita nunca; se corrige con la siguiente |
+
+### El catálogo es el que más se nota
+
+Antes de V10, la lista de colores estaba escrita tres veces: en un `CHECK` de la base, en los contratos del backend
+y en el frontend. V10 la dejó en un solo sitio y borró los tres `CHECK` de `mark_color`, `breed` y `coat_color`.
+
+La contrapartida, dicha con todas las letras: **la base ya no rechaza un color inválido.** El backend es quien valida
+contra las filas activas de `catalog_option`. Quien escriba directo con `psql` puede meter un color que no existe.
+
 ## Uso local
 
 ```bash
