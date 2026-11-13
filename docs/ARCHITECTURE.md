@@ -142,7 +142,7 @@ Index `ix_cage_owner (owner_id) WHERE active` for "my cages".
 
 > Why V3: the contracts use `cageId: "cage-1"` but V1 created a numeric id. V1 can't be edited, so V3 adds `code`, fills the pilot cage and makes it `NOT NULL UNIQUE`.
 
-### `app_user` — V2, V7
+### `app_user` — V2, V7, V16
 
 | Column | Type | Notes |
 |---|---|---|
@@ -153,11 +153,22 @@ Index `ix_cage_owner (owner_id) WHERE active` for "my cages".
 | `password_hash` | `VARCHAR(100)` NULL (V7) | BCrypt, never plain text. NULL for an account created with Google that never set a password |
 | `google_subject` | `VARCHAR(255)` NULL, `uq_app_user_google_subject` (V7) | Google's stable user id (`sub`). Accounts are matched by this, never by email alone |
 | `status` | `VARCHAR(30)` NOT NULL, `ck_app_user_status` | `PENDING_VERIFICATION`, `ACTIVE`, `DISABLED` |
+| `role` | `VARCHAR(20)` NOT NULL default `BREEDER`, `ck_app_user_role` (V16) | `BREEDER`, `ADMIN` |
 | `created_at`, `updated_at` | `TIMESTAMPTZ` NOT NULL | |
 
 `ck_app_user_login_method` (V7): `password_hash IS NOT NULL OR google_subject IS NOT NULL`, so every account can sign in some way.
 
-One kind of user only: there is no `role` column on purpose.
+**V16 added `role`, reversing an earlier decision.** There used to be one kind of user on purpose,
+because every account did the same things. What changed is that the catalog (breeds, mark colors,
+coat colors) moved into `catalog_option` in V10 so it could change without a release — but nothing
+in the app could edit it, so adding a breed still meant running SQL by hand. Somebody has to be
+allowed to, and that is what `ADMIN` is for. The default is `BREEDER`, so every existing account
+keeps exactly what it had.
+
+The first admin is the owner of the pilot cage (V12): the system needs one to exist, and promoting
+the account that is already there avoids inventing a user with a password inside a migration. In a
+development database that `UPDATE` matches nothing, because V16 runs before the dev seed, so the
+seed makes `dev` an `ADMIN` and adds an ordinary `criador` next to it.
 
 ### `otp_challenge` — V2
 
