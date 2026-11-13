@@ -54,9 +54,18 @@ WHERE g.photo IS NULL AND g.mark_color = v.mark_color
 
 -- Test account dev / dev-password, already ACTIVE so it can log in right away (the OTP still goes to the log
 -- with the backend's dev profile). The hash was made with the backend's BCryptPasswordHasher. Never a real user.
-INSERT INTO app_user (id, username, full_name, email, password_hash, status, created_at, updated_at)
+-- ADMIN so the admin screens can be worked on locally. V16 promotes the owner of the pilot cage, but
+-- it runs before this seed, so in a fresh dev database there would be no admin at all.
+INSERT INTO app_user (id, username, full_name, email, password_hash, status, role, created_at, updated_at)
 VALUES ('00000000-0000-4000-8000-000000000001', 'dev', 'Usuario de desarrollo', 'dev@cuymonitor.local',
-        '$2a$10$qxRC/o1O50HchjqVUfIJW.GwuwiPf0QsZ9RMwT.4RXX.U08WWhEuu', 'ACTIVE', now(), now())
+        '$2a$10$qxRC/o1O50HchjqVUfIJW.GwuwiPf0QsZ9RMwT.4RXX.U08WWhEuu', 'ACTIVE', 'ADMIN', now(), now())
+ON CONFLICT ON CONSTRAINT uq_app_user_username DO UPDATE SET role = 'ADMIN';
+
+-- a second, ordinary account, so the admin screens have someone other than the admin to show
+INSERT INTO app_user (id, username, full_name, email, password_hash, status, role, created_at, updated_at)
+VALUES ('00000000-0000-4000-8000-000000000002', 'criador', 'Criadora de desarrollo',
+        'criador@cuymonitor.local',
+        '$2a$10$qxRC/o1O50HchjqVUfIJW.GwuwiPf0QsZ9RMwT.4RXX.U08WWhEuu', 'ACTIVE', 'BREEDER', now(), now())
 ON CONFLICT ON CONSTRAINT uq_app_user_username DO NOTHING;
 
 -- Sample data so the dashboard has something to show without the fake producer.

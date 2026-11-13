@@ -44,7 +44,10 @@ cuy-monitor-db/
 │   ├── V11__add_photo_to_guinea_pig.sql   photo + photo_content_type: a guinea pig is registered by its photo
 │   ├── V12__add_owner_to_cage.sql      owner_id + active: several cages per account
 │   ├── V13__add_sample_count_to_baseline_profile.sql   how many windows the normal profile was learned from
-│   └── V14__index_alert_history_by_guinea_pig.sql      the alert history of one guinea pig
+│   ├── V14__index_alert_history_by_guinea_pig.sql      the alert history of one guinea pig
+│   ├── V15__add_ai_note_to_alert.sql   what the assistant wrote about an alert, with nobody asking
+│   ├── V16__add_role_to_app_user.sql   BREEDER / ADMIN: somebody has to be able to edit the catalog
+│   └── V17__add_photo_and_nickname_to_app_user.sql   the breeder's own face and short name
 ├── seeds/dev/
 │   └── R__dev_seed.sql                 repeatable, dev only: guinea pigs, test user, sample readings
 ├── docker-compose.yml                  postgres:18 + flyway (local)
@@ -142,7 +145,7 @@ Index `ix_cage_owner (owner_id) WHERE active` for "my cages".
 
 > Why V3: the contracts use `cageId: "cage-1"` but V1 created a numeric id. V1 can't be edited, so V3 adds `code`, fills the pilot cage and makes it `NOT NULL UNIQUE`.
 
-### `app_user` — V2, V7
+### `app_user` — V2, V7, V16, V17
 
 | Column | Type | Notes |
 |---|---|---|
@@ -153,11 +156,27 @@ Index `ix_cage_owner (owner_id) WHERE active` for "my cages".
 | `password_hash` | `VARCHAR(100)` NULL (V7) | BCrypt, never plain text. NULL for an account created with Google that never set a password |
 | `google_subject` | `VARCHAR(255)` NULL, `uq_app_user_google_subject` (V7) | Google's stable user id (`sub`). Accounts are matched by this, never by email alone |
 | `status` | `VARCHAR(30)` NOT NULL, `ck_app_user_status` | `PENDING_VERIFICATION`, `ACTIVE`, `DISABLED` |
+| `role` | `VARCHAR(20)` NOT NULL default `BREEDER`, `ck_app_user_role` (V16) | `BREEDER`, `ADMIN` |
+| `nickname` | `VARCHAR(30)` NULL, `ck_app_user_nickname` (V17) | **V17.** A short name the breeder picks and can change. Not an identifier: not unique, never used to log in. The screens fall back to `full_name` when it is `NULL` |
+| `photo` | `BYTEA` NULL, `ck_app_user_photo_size` (V17) | **V17.** The breeder's own picture, at most 300 KB. Same reasoning as `guinea_pig.photo` in V11: small enough that there is no bucket, no credentials and no extra cost |
+| `photo_content_type` | `VARCHAR(30)` NULL, `ck_app_user_photo_content_type` (V17) | **V17.** `image/jpeg`, `image/png` or `image/webp` only — the bytes are served back to a browser, so nothing that can carry a script |
 | `created_at`, `updated_at` | `TIMESTAMPTZ` NOT NULL | |
+
+`ck_app_user_photo` (V17): `(photo IS NULL) = (photo_content_type IS NULL)`, so there are never bytes without their type.
 
 `ck_app_user_login_method` (V7): `password_hash IS NOT NULL OR google_subject IS NOT NULL`, so every account can sign in some way.
 
-One kind of user only: there is no `role` column on purpose.
+**V16 added `role`, reversing an earlier decision.** There used to be one kind of user on purpose,
+because every account did the same things. What changed is that the catalog (breeds, mark colors,
+coat colors) moved into `catalog_option` in V10 so it could change without a release — but nothing
+in the app could edit it, so adding a breed still meant running SQL by hand. Somebody has to be
+allowed to, and that is what `ADMIN` is for. The default is `BREEDER`, so every existing account
+keeps exactly what it had.
+
+The first admin is the owner of the pilot cage (V12): the system needs one to exist, and promoting
+the account that is already there avoids inventing a user with a password inside a migration. In a
+development database that `UPDATE` matches nothing, because V16 runs before the dev seed, so the
+seed makes `dev` an `ADMIN` and adds an ordinary `criador` next to it.
 
 ### `otp_challenge` — V2
 
