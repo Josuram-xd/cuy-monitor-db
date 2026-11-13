@@ -271,7 +271,7 @@ Indexes `ix_event_guinea_pig_occurred (guinea_pig_id, occurred_at DESC)` for his
 
 Index `ix_state_transition_guinea_pig_occurred (guinea_pig_id, occurred_at DESC)`.
 
-### `alert` — V4
+### `alert` — V4, V15
 
 | Column | Type | Notes |
 |---|---|---|
@@ -284,8 +284,12 @@ Index `ix_state_transition_guinea_pig_occurred (guinea_pig_id, occurred_at DESC)
 | `status` | `VARCHAR(20)` NOT NULL default `OPEN`, CHECK | `OPEN, REVIEWED` |
 | `created_at` | `TIMESTAMPTZ` NOT NULL default `now()` | |
 | `reviewed_at` | `TIMESTAMPTZ` NULL | |
+| `ai_note` | `VARCHAR(2000)` NULL | **V15.** What the assistant wrote about this alert on its own, with no question from the breeder. `NULL` while the background task has not answered yet, or when the model call failed |
+| `ai_note_at` | `TIMESTAMPTZ` NULL | **V15.** When the note was written |
 
-`ck_alert_guinea_pig_scope`: `guinea_pig_id` is set only for `BEHAVIOR` alerts. `ck_alert_reviewed_at`: `reviewed_at` is set if and only if `status = 'REVIEWED'`.
+> Why V15: the assistant only answered when asked. The explanation of an alert is the same every time, so it is written once, when the alert is created, instead of being recomputed — and paid for — on every open.
+
+`ck_alert_ai_note`: `ai_note` and `ai_note_at` are both set or both `NULL`. `ck_alert_guinea_pig_scope`: `guinea_pig_id` is set only for `BEHAVIOR` alerts. `ck_alert_reviewed_at`: `reviewed_at` is set if and only if `status = 'REVIEWED'`.
 
 Indexes `ix_alert_status_created (status, created_at DESC)` for `GET /api/v1/alerts?status=OPEN`, `ix_alert_cage_created (cage_id, created_at DESC)` for the alert history of one or more cages, and `ix_alert_guinea_pig_created (guinea_pig_id, created_at DESC) WHERE guinea_pig_id IS NOT NULL` (V14) for the history of one guinea pig (`GET /api/v1/alerts/history`).
 
