@@ -231,6 +231,20 @@ the coat colors. The backend serves the active rows to the dashboard, which has 
 Adding a color is one `INSERT`; renaming one is an `UPDATE` of `label`. Retiring one is `active = false`, never a
 `DELETE`, so the guinea pigs wearing it keep a readable value.
 
+### `app_setting` — V18
+
+What an admin changed from the panel ("Reglas y mensajes"): the health rules, the texts of the alerts and the
+assistant's question limit. **Only the changed values are stored**: a key that is not here keeps the backend's
+default (`application.yml`), and "volver a los valores de fábrica" deletes the rows. The backend checks every value
+against its range before saving and applies it at once, without a restart.
+
+| Column | Type | Notes |
+|---|---|---|
+| `key` | `VARCHAR(60)` NOT NULL, `pk_app_setting`, `ck_app_setting_key` | Dotted name: `health.observedToAlertMinutes`, `message.alert`, `assistant.maxQuestions` |
+| `value` | `VARCHAR(500)` NOT NULL | As text; the backend knows each key's type and range. 500 is the length of `alert.message` |
+| `updated_at` | `TIMESTAMPTZ` NOT NULL default `now()` | When it was last changed |
+| `updated_by` | `UUID` NULL, `fk_app_setting_updated_by` → `app_user (id)` `ON DELETE SET NULL` | Who changed it; the setting stays if that account is deleted |
+
 ### `guinea_pig` — V4, V8, V9, V10, V11
 
 | Column | Type | Notes |
