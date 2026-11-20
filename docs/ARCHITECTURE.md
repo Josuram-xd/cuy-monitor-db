@@ -245,6 +245,31 @@ against its range before saving and applies it at once, without a restart.
 | `updated_at` | `TIMESTAMPTZ` NOT NULL default `now()` | When it was last changed |
 | `updated_by` | `UUID` NULL, `fk_app_setting_updated_by` → `app_user (id)` `ON DELETE SET NULL` | Who changed it; the setting stays if that account is deleted |
 
+### `hardware_station` — V19, V20
+
+The one physical kit (scale, microphone, camera) shared by the demonstration accounts. A single row, enforced by
+`singleton`. `cage_id` says which cage the kit is connected to; `NULL` means it is available. The camera columns
+(V20) are set by the owner of that cage from the dashboard and read by the edge agent on the farm laptop.
+
+| Column | Type | Notes |
+|---|---|---|
+| `singleton` | `BOOLEAN` PK, default `TRUE`, CHECK `TRUE` | **V19.** Only one row can exist |
+| `cage_id` | `BIGINT` NULL → `cage(id)` | **V19.** Cage the kit is connected to; `NULL` = available. Must be `NULL` exactly when `since` is `NULL` |
+| `since` | `TIMESTAMPTZ` NULL | **V19.** When the kit was connected to `cage_id` |
+| `camera_type` | `VARCHAR(10)` NULL, `ck_hardware_station_camera_type` | **V20.** `PHONE` (IP Webcam app) or `RTSP` (TP-Link Tapo). `NULL` = no camera configured |
+| `camera_host` | `VARCHAR(15)` NULL | **V20.** IPv4 address of the camera on the farm LAN (the backend only accepts private addresses) |
+| `camera_port` | `INTEGER` NULL, `ck_hardware_station_camera_port` (1–65535) | **V20.** Port of the camera service |
+| `camera_username` | `VARCHAR(64)` NULL | **V20.** RTSP user; `NULL` for `PHONE` |
+| `camera_password_enc` | `TEXT` NULL | **V20.** Camera password **encrypted by the backend with AES-256-GCM**, key derived from `APP_API_KEY`. It is reversible on purpose (the agent needs the plain value), so it is not a hash. Never returned to the dashboard |
+| `camera_stream` | `VARCHAR(10)` NULL, `ck_hardware_station_camera_stream` | **V20.** `stream1` (high) or `stream2` (low, the default). RTSP only |
+| `camera_version` | `INTEGER` NOT NULL default `0` | **V20.** Incremented on every save. The agent echoes it in its status report, so a late report never overwrites a newer configuration |
+| `camera_status` | `VARCHAR(20)` NULL, `ck_hardware_station_camera_status` | **V20.** Last report from the agent: `CONNECTED`, `AUTH_FAILED`, `UNREACHABLE`, `FFMPEG_MISSING`. `NULL` = no report yet for this version |
+| `camera_status_at` | `TIMESTAMPTZ` NULL | **V20.** When `camera_status` was reported. `NULL` exactly when `camera_status` is `NULL` |
+
+Constraints added in V20: `ck_hardware_station_camera_complete` (`camera_type`, `camera_host` and `camera_port` are all
+set or all `NULL`) and `ck_hardware_station_camera_status_at`. The rest of the validation (private IPv4 only, password
+required for RTSP) is done by the backend.
+
 ### `guinea_pig` — V4, V8, V9, V10, V11
 
 | Column | Type | Notes |
