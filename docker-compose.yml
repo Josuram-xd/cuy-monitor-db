@@ -1,5 +1,5 @@
-# Base local de desarrollo: Postgres 18 + Flyway (migrations/ + seeds/dev/).
-# Solo desarrollo: credenciales fijas, nunca usar contra RDS.
+# Local development database: Postgres 18 + Flyway (migrations/ + seeds/dev/).
+# Development only: fixed credentials, never use against RDS.
 name: cuy-monitor-db
 
 services:
@@ -12,7 +12,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      # Formato de Postgres 18: el volumen va en /var/lib/postgresql, NO en .../data
+      # Postgres 18 format: the volume goes in /var/lib/postgresql, NOT in .../data
       - pgdata-dev:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cuymonitor -d cuymonitor"]
